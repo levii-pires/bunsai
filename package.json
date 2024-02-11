@@ -1,0 +1,29 @@
+{
+  "name": "bonsai",
+  "version": "0.1.0",
+  "author": "Mateus Pires",
+  "module": "./index.ts",
+  "devDependencies": {
+    "@types/bun": "^1.0.4",
+    "@types/node": "^20.11.14",
+    "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@types/nunjucks": "^3.2.6",
+    "@types/sass": "^1.45.0",
+    "nunjucks": "^3.2.4",
+    "sass": "^1.70.0"
+  },
+  "engines": {
+    "bun": "1"
+  },
+  "files": [
+    "loaders",
+    "index.ts",
+    "types.ts",
+    "recommended.ts"
+  ],
+  "license": "MIT",
+  "private": false,
+  "type": "module"
+}

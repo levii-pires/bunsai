@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "ES2022",
+    "target": "ES2022",
+    "declaration": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Node",
+    "isolatedModules": true,
+    "sourceMap": true,
+    "types": ["@types/bun"]
+  }
+}
