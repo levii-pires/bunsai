@@ -1,5 +1,5 @@
 {
-  "name": "bonsai",
+  "name": "bonsai.js",
   "version": "0.1.0",
   "author": "Mateus Pires",
   "module": "./index.ts",
@@ -27,3 +27,4 @@
   "private": false,
   "type": "module"
 }
+

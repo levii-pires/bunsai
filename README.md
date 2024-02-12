@@ -2,16 +2,16 @@
 <img src="./assets/logo.png" width="200px" height="200px">
 </p>
 
-<h1 align="center">BonSai</h1>
+<h1 align="center">BonSai.js</h1>
 
 > Japanese art of growing and shaping miniature trees in containers
 
 ## Quick start
 
-BonSai is a zero dependency library/framework (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BonSai is a zero dependency library/framework made for [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
 
 ```sh
-bun add bonsai
+bun add bonsai.js
 ```
 
 And use it as a handler:
@@ -190,3 +190,4 @@ BonSai({
 ```
 
 > Check the [`Recommended`](./types.ts#L67) interface.
+
