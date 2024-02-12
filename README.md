@@ -8,7 +8,7 @@
 
 ## Quick start
 
-BonSai is a full-stack agnostic framework for the web, built upon Bun [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BonSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
 
 ```sh
 bun add bonsai.js
