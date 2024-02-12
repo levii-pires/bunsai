@@ -17,7 +17,7 @@ bun add bonsai.js
 And use it as a handler:
 
 ```js
-import BonSai from "bonsai";
+import BonSai from "bonsai.js";
 
 const { fetch } = BonSai({
   /*
@@ -94,7 +94,7 @@ bun add nunjucks @types/nunjucks
 ```
 
 ```js
-import getNunjucksLoader from "bonsai/loaders/nunjucks";
+import getNunjucksLoader from "bonsai.js/loaders/nunjucks";
 
 const { loader, env } =
   getNunjucksLoader(/* (optional) root path and nunjucks configure options */);
@@ -129,7 +129,7 @@ bun add sass @types/sass
 ```
 
 ```js
-import getSassLoader from "bonsai/loaders/sass";
+import getSassLoader from "bonsai.js/loaders/sass";
 
 const loader = getSassLoader(/* (optional) sass compiler options */);
 
@@ -145,7 +145,7 @@ BonSai({
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
-import { ModuleLoader } from "bonsai/loaders";
+import { ModuleLoader } from "bonsai.js/loaders";
 
 BonSai({
   loaders: {
@@ -178,7 +178,7 @@ export function handler(data: ModuleData) {
 If you liked BonSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
-import getRecommended from "bonsai/recommended";
+import getRecommended from "bonsai.js/recommended";
 
 const { loaders, staticFiles, nunjucksEnv } =
   getRecommended(/* (optional) nunjucks and sass options */);
