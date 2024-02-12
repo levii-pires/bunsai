@@ -1,6 +1,7 @@
 {
   "name": "bonsai.js",
   "version": "0.1.0",
+  "description": "BonSai is a full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "module": "./index.ts",
   "devDependencies": {
