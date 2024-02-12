@@ -87,6 +87,8 @@ BonSai is 100% flexible, but this does not mean that it cannot be opinionated. B
 
 ### [Nunjucks](https://mozilla.github.io/nunjucks/)
 
+> Since v0.1.0
+
 Nunjucks is a rich powerful templating language with block inheritance, autoescaping, macros, asynchronous control, and more. Heavily inspired by jinja2.
 
 ```sh
@@ -122,6 +124,8 @@ BonSai({
 
 ### [Sass](https://sass-lang.com/)
 
+> Since v0.1.0
+
 Sass is the most mature, stable, and powerful professional grade CSS extension language in the world.
 
 ```sh
@@ -141,6 +145,8 @@ BonSai({
 ```
 
 ### Module
+
+> Since v0.1.0
 
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
@@ -175,6 +181,8 @@ export function handler(data: ModuleData) {
 
 ### Recommended
 
+> Since v0.1.0
+
 If you liked BonSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
@@ -190,4 +198,33 @@ BonSai({
 ```
 
 > Check the [`Recommended`](./types.ts#L67) interface.
+
+## Middlewares
+
+> Since v0.2.0
+
+You can use middlewares to override or customize the response given by the loader.
+
+```js
+const { addMiddleware, removeMiddleware } = BonSai(/* ... */);
+
+addMiddleware(
+  "name it so you can remove it later",
+  (response, request, server) => {
+    // you can stop the middleware execution chain by returning a Response
+
+    // if you want to stop the chain and override the response, return a new Response object
+    return new Response();
+
+    // if you want to just stop the chain, return the same Response object
+    return response;
+  }
+)
+  .addMiddleware(/* can be chained */);
+
+removeMiddleware(
+  "name it so you can remove it later"
+)
+  .removeMiddleware(/* can be chained */);
+```
 

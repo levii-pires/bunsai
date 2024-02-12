@@ -103,4 +103,12 @@ export interface Recommended {
   nunjucksEnv: Environment;
 }
 
+export type MiddlewareResponse = Response | void;
+
+export type Middleware = (
+  response: Response,
+  request: Request,
+  server: Server
+) => MiddlewareResponse | Promise<MiddlewareResponse>;
+
 export {};

@@ -1,5 +1,5 @@
 import type { Server } from "bun";
-import type { Extname, LoaderMap, ServerOptions } from "./types";
+import type { Extname, LoaderMap, Middleware, ServerOptions } from "./types";
 import { StaticLoader } from "./loaders";
 import { extname } from "path";
 
@@ -25,9 +25,35 @@ export default function BonSai(opts: ServerOptions) {
 
   Object.assign(routeLoaders, opts.loaders);
 
-  return {
+  const middlewares: Record<string, Middleware> = {};
+
+  const instance = {
     reloadRouter() {
       router.reload();
+    },
+
+    /**
+     * @returns `this` for chaining
+     */
+    addMiddleware(name: string, middleware: Middleware) {
+      if (typeof middleware != "function")
+        throw new TypeError("middleware must be a function");
+
+      if (name in middlewares) {
+        throw new Error(`'${name}' middleware already exists`);
+      }
+
+      middlewares[name] = middleware;
+
+      return instance;
+    },
+
+    /**
+     * @returns `this` for chaining
+     */
+    removeMiddleware(name: string) {
+      delete middlewares[name];
+      return instance;
     },
     async fetch(request: Request, server: Server) {
       const route = router.match(request);
@@ -43,7 +69,19 @@ export default function BonSai(opts: ServerOptions) {
           statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
         });
 
-      return loader(route.filePath, { server, request, route });
+      const response = await loader(route.filePath, { server, request, route });
+
+      for (const mid of Object.values(middlewares)) {
+        const result = await mid(response, request, server);
+
+        if (result) return result;
+      }
+
+      return response;
     },
   };
+
+  return instance;
 }
+
+export type * from "./types";
