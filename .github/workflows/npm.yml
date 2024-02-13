@@ -7,17 +7,17 @@ on:
 jobs:
   release:
     name: npm
-      runs-on: ubuntu-latest
-      steps:
-        - name: checkout
-          uses: actions/checkout@v2.1.1
-        - name: node
-          uses: actions/setup-node@v1.4.2
-          with: 
-            node-version: 12
-            registry-url: https://registry.npmjs.org
-        - name:
-          run: npm publish --access public
-          working-directory: bunsai
-          env:
-            NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.1.1
+      - name: node
+        uses: actions/setup-node@v1.4.2
+        with: 
+           node-version: 12
+           registry-url: https://registry.npmjs.org
+      - name: publish
+        run: npm publish --access public
+        working-directory: bunsai
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
