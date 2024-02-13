@@ -7,7 +7,7 @@ function getStatic(staticFiles: Extname[]) {
   return Object.fromEntries(staticFiles.map((file) => [file, StaticLoader]));
 }
 
-export default function BonSai(opts: ServerOptions) {
+export default function BunSai(opts: ServerOptions) {
   const router = new Bun.FileSystemRouter({
     dir: opts.dir || "./pages",
     style: "nextjs",
