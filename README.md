@@ -2,26 +2,26 @@
 <img src="./assets/logo.png" width="200px" height="200px">
 </p>
 
-<h1 align="center">BonSai.js</h1>
+<h1 align="center">BunSai</h1>
 
-> Japanese art of growing and shaping miniature trees in containers
+> Bonsai is a japanese art of growing and shaping miniature trees in containers
 
 ## Quick start
 
-BonSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BunSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
 
 ```sh
-bun add bonsai.js
+bun add bunsai
 ```
 
 And use it as a handler:
 
 ```js
-import BonSai from "bonsai.js";
+import BunSai from "bunsai";
 
-const { fetch } = BonSai({
+const { fetch } = BunSai({
   /*
-    "loaders" is the only required property, as it configures BonSai's behavior
+    "loaders" is the only required property, as it configures BunSai's behavior
   */
   loaders,
 });
@@ -33,7 +33,7 @@ Bun.serve({
 
 ## How it works?
 
-Powered by [`Bun.FileSystemRouter`](https://bun.sh/docs/api/file-system-router) and some fancy tricks, BonSai takes an approach where you declare the files you want to become "routes"
+Powered by [`Bun.FileSystemRouter`](https://bun.sh/docs/api/file-system-router) and some fancy tricks, BunSai takes an approach where you declare the files you want to become "routes"
 
 ```js
 loaders: {
@@ -60,7 +60,7 @@ pages
 You can configure BonSai to serve those files:
 
 ```js
-BonSai({
+BunSai({
   loaders: {
     ".njk": nunjucksLoader,
     ".ts": apiLoader,
@@ -83,7 +83,7 @@ staticFiles: [".jpg", ".css", ".aac"];
 
 ## Built-in loaders
 
-BonSai is 100% flexible, but this does not mean that it cannot be opinionated. BonSai ships with built-in (optional) loaders:
+BunSai is 100% flexible, but this does not mean that it cannot be opinionated. BunSai ships with built-in (optional) loaders:
 
 ### [Nunjucks](https://mozilla.github.io/nunjucks/)
 
@@ -96,7 +96,7 @@ bun add nunjucks @types/nunjucks
 ```
 
 ```js
-import getNunjucksLoader from "bonsai.js/loaders/nunjucks";
+import getNunjucksLoader from "bunsai/loaders/nunjucks";
 
 const { loader, env } =
   getNunjucksLoader(/* (optional) root path and nunjucks configure options */);
@@ -104,7 +104,7 @@ const { loader, env } =
 // you can make changes on the nunjucks Environment object (the 'env' object).
 // See https://mozilla.github.io/nunjucks/api.html#environment
 
-BonSai({
+BunSai({
   loaders: {
     ".njk": loader,
   },
@@ -133,11 +133,11 @@ bun add sass @types/sass
 ```
 
 ```js
-import getSassLoader from "bonsai.js/loaders/sass";
+import getSassLoader from "bunsai/loaders/sass";
 
 const loader = getSassLoader(/* (optional) sass compiler options */);
 
-BonSai({
+BunSai({
   loaders: {
     ".scss": loader,
   },
@@ -151,9 +151,9 @@ BonSai({
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
-import { ModuleLoader } from "bonsai.js/loaders";
+import { ModuleLoader } from "bunsai/loaders";
 
-BonSai({
+BunSai({
   loaders: {
     ".ts": ModuleLoader,
   },
@@ -183,15 +183,15 @@ export function handler(data: ModuleData) {
 
 > Since v0.1.0
 
-If you liked BonSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
+If you liked BunSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
-import getRecommended from "bonsai.js/recommended";
+import getRecommended from "bunsai/recommended";
 
 const { loaders, staticFiles, nunjucksEnv } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
-BonSai({
+BunSai({
   loaders,
   staticFiles,
 });
@@ -201,12 +201,12 @@ BonSai({
 
 ## Middlewares
 
-> Since v0.2.0
+> Since v0.1.0
 
 You can use middlewares to override or customize the response given by the loader.
 
 ```js
-const { addMiddleware, removeMiddleware } = BonSai(/* ... */);
+const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
 
 addMiddleware(
   "name it so you can remove it later",
