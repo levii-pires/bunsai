@@ -31,10 +31,10 @@ export type Extname = `.${Lowercase<string>}`;
 
 export type LoaderMap = Record<Extname, Loader>;
 
-export interface ServerOptions {
+export interface BunSaiOptions {
   /**
    * This option only applies to the `Bun.FileSystemRouter`.
-   * All loaders that use a root folder must use this folder.
+   * All loaders that use a root folder must use the same configuration.
    * @default "./pages"
    */
   dir?: string;

@@ -1,5 +1,5 @@
 import type { Server } from "bun";
-import type { Extname, LoaderMap, Middleware, ServerOptions } from "./types";
+import type { Extname, LoaderMap, Middleware, BunSaiOptions } from "./types";
 import { StaticLoader } from "./loaders";
 import { extname } from "path";
 
@@ -7,7 +7,7 @@ function getStatic(staticFiles: Extname[]) {
   return Object.fromEntries(staticFiles.map((file) => [file, StaticLoader]));
 }
 
-export default function BunSai(opts: ServerOptions) {
+export default function BunSai(opts: BunSaiOptions) {
   const router = new Bun.FileSystemRouter({
     dir: opts.dir || "./pages",
     style: "nextjs",
@@ -55,6 +55,7 @@ export default function BunSai(opts: ServerOptions) {
       delete middlewares[name];
       return instance;
     },
+
     async fetch(request: Request, server: Server) {
       const route = router.match(request);
 
