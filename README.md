@@ -201,15 +201,18 @@ BunSai({
 
 ## Middlewares
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
-You can use middlewares to override or customize the response given by the loader.
+### Response Middlewares
+
+You can use response middlewares to override or customize the response given by the loader.
 
 ```js
 const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
 
 addMiddleware(
-  "name it so you can remove it later",
+  "name",
+  "response", // middleware type
   (response, request, server) => {
     // you can stop the middleware execution chain by returning a Response
 
@@ -219,12 +222,27 @@ addMiddleware(
     // if you want to just stop the chain, return the same Response object
     return response;
   }
-)
-  .addMiddleware(/* can be chained */);
+).addMiddleware(/* can be chained */);
 
-removeMiddleware(
-  "name it so you can remove it later"
-)
-  .removeMiddleware(/* can be chained */);
+removeMiddleware("name", "response").removeMiddleware(/* can be chained */);
 ```
 
+### Request Middlewares
+
+You can use request middlewares to do things before `router.match`, the loader, and the [response-middlewares](#response-middlewares) kick in, including returning an early response (e.g. 429 Too Many Requests).
+
+```js
+const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
+
+addMiddleware(
+  "name",
+  "request", // middleware type
+  (request, server) => {
+    // you can stop the middleware execution chain by returning a Response
+    // if you want to stop the chain and override the response, return a new Response object
+    return new Response();
+  }
+).addMiddleware(/* can be chained */);
+
+removeMiddleware("name", "request").removeMiddleware(/* can be chained */);
+```

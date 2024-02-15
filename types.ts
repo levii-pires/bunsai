@@ -103,12 +103,36 @@ export interface Recommended {
   nunjucksEnv: Environment;
 }
 
-export type MiddlewareResponse = Response | void;
+export interface BunSaiInstance {
+  reloadRouter(): void;
 
-export type Middleware = (
+  addMiddleware(
+    name: string,
+    type: "response",
+    middleware: ResponseMiddleware
+  ): this;
+  addMiddleware(
+    name: string,
+    type: "request",
+    middleware: RequestMiddleware
+  ): this;
+
+  removeMiddleware(name: string, type: "response" | "request"): this;
+
+  fetch(request: Request, server: Server): Promise<Response>;
+}
+
+export type MiddlewareResult = Response | void;
+
+export type RequestMiddleware = (
+  request: Request,
+  server: Server
+) => MiddlewareResult | Promise<MiddlewareResult>;
+
+export type ResponseMiddleware = (
   response: Response,
   request: Request,
   server: Server
-) => MiddlewareResponse | Promise<MiddlewareResponse>;
+) => MiddlewareResult | Promise<MiddlewareResult>;
 
 export {};

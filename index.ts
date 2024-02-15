@@ -1,10 +1,29 @@
 import type { Server } from "bun";
-import type { Extname, LoaderMap, Middleware, BunSaiOptions } from "./types";
+import type {
+  Extname,
+  LoaderMap,
+  ResponseMiddleware,
+  BunSaiOptions,
+  RequestMiddleware,
+  BunSaiInstance,
+} from "./types";
 import { StaticLoader } from "./loaders";
 import { extname } from "path";
 
 function getStatic(staticFiles: Extname[]) {
   return Object.fromEntries(staticFiles.map((file) => [file, StaticLoader]));
+}
+
+async function runMiddlewares(
+  record: Record<string, RequestMiddleware | ResponseMiddleware>,
+  data: [Response, Request, Server] | [Request, Server]
+) {
+  for (const mid of Object.values(record)) {
+    // @ts-ignore
+    const result = await mid(...data);
+
+    if (result) return result;
+  }
 }
 
 export default function BunSai(opts: BunSaiOptions) {
@@ -25,9 +44,10 @@ export default function BunSai(opts: BunSaiOptions) {
 
   Object.assign(routeLoaders, opts.loaders);
 
-  const middlewares: Record<string, Middleware> = {};
+  const responseMiddlewares: Record<string, ResponseMiddleware> = {};
+  const requestMiddlewares: Record<string, RequestMiddleware> = {};
 
-  const instance = {
+  const instance: BunSaiInstance = {
     reloadRouter() {
       router.reload();
     },
@@ -35,15 +55,33 @@ export default function BunSai(opts: BunSaiOptions) {
     /**
      * @returns `this` for chaining
      */
-    addMiddleware(name: string, middleware: Middleware) {
+    addMiddleware(name, type, middleware) {
       if (typeof middleware != "function")
         throw new TypeError("middleware must be a function");
 
-      if (name in middlewares) {
-        throw new Error(`'${name}' middleware already exists`);
-      }
+      switch (type) {
+        case "request": {
+          if (name in requestMiddlewares) {
+            throw new Error(`'${name}' middleware already exists`);
+          }
 
-      middlewares[name] = middleware;
+          requestMiddlewares[name] = middleware as RequestMiddleware;
+
+          break;
+        }
+        case "response": {
+          if (name in responseMiddlewares) {
+            throw new Error(`'${name}' middleware already exists`);
+          }
+
+          responseMiddlewares[name] = middleware as ResponseMiddleware;
+
+          break;
+        }
+        default: {
+          throw new Error(`unknown type '${type}'`);
+        }
+      }
 
       return instance;
     },
@@ -51,12 +89,32 @@ export default function BunSai(opts: BunSaiOptions) {
     /**
      * @returns `this` for chaining
      */
-    removeMiddleware(name: string) {
-      delete middlewares[name];
+    removeMiddleware(name, type) {
+      switch (type) {
+        case "response": {
+          delete responseMiddlewares[name];
+          break;
+        }
+        case "request": {
+          delete requestMiddlewares[name];
+          break;
+        }
+        default: {
+          throw new Error(`unknown type '${type}'`);
+        }
+      }
+
       return instance;
     },
 
     async fetch(request: Request, server: Server) {
+      const reqResult = await runMiddlewares(requestMiddlewares, [
+        request,
+        server,
+      ]);
+
+      if (reqResult) return reqResult;
+
       const route = router.match(request);
 
       if (!route) return new Response(null, { status: 404 });
@@ -72,13 +130,13 @@ export default function BunSai(opts: BunSaiOptions) {
 
       const response = await loader(route.filePath, { server, request, route });
 
-      for (const mid of Object.values(middlewares)) {
-        const result = await mid(response, request, server);
+      const resResult = await runMiddlewares(responseMiddlewares, [
+        response,
+        request,
+        server,
+      ]);
 
-        if (result) return result;
-      }
-
-      return response;
+      return resResult || response;
     },
   };
 
