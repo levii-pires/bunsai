@@ -1,3 +1,4 @@
+import type { LoaderInitiator } from "../types";
 import ModuleLoader from "./module";
 
 export { default as ModuleLoader } from "./module";

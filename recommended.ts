@@ -4,18 +4,18 @@ import getNunjucksLoader from "./loaders/nunjucks";
 import getSassLoader from "./loaders/sass";
 
 export default function getRecommended(opts?: RecommendedOpts): Recommended {
-  const { loader: njkLoader, env: nunjucksEnv } = getNunjucksLoader(
-    opts?.nunjucks?.path,
-    opts?.nunjucks?.options
-  );
+  const nunjucks = getNunjucksLoader(opts?.nunjucks?.options);
 
   return {
-    nunjucksEnv,
+    get nunjucksEnv() {
+      return nunjucks.env;
+    },
+
     loaders: {
       ...ServerModules,
-      ".njk": njkLoader,
+      ".njk": nunjucks.loaderInit,
       ".scss": getSassLoader(opts?.sass?.options),
-    } as LoaderMap,
+    },
 
     // prettier-ignore
     staticFiles: [

@@ -37,7 +37,7 @@ Powered by [`Bun.FileSystemRouter`](https://bun.sh/docs/api/file-system-router) 
 
 ```js
 loaders: {
-  ".ext": loader
+  ".ext": loaderInitiator
 }
 ```
 
@@ -62,16 +62,16 @@ You can configure BonSai to serve those files:
 ```js
 BunSai({
   loaders: {
-    ".njk": nunjucksLoader,
-    ".ts": apiLoader,
-    ".tsx": reactLoader,
-    ".svelte": svelteLoader,
-    ".vue": vueLoader,
+    ".njk": nunjucksLoaderInit,
+    ".ts": apiLoaderInit,
+    ".tsx": reactLoaderInit,
+    ".svelte": svelteLoaderInit,
+    ".vue": vueLoaderInit,
   },
 });
 ```
 
-> Check the [`Loader`](./types.ts#L5) interface
+> Check the [`LoaderInitiator`](./types.ts#L10) interface
 
 You can also specify file extensions that will be served staticly (`return new Response(Bun.file(filePath))`), like so:
 
@@ -87,7 +87,7 @@ BunSai is 100% flexible, but this does not mean that it cannot be opinionated. B
 
 ### [Nunjucks](https://mozilla.github.io/nunjucks/)
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 Nunjucks is a rich powerful templating language with block inheritance, autoescaping, macros, asynchronous control, and more. Heavily inspired by jinja2.
 
@@ -98,15 +98,16 @@ bun add nunjucks @types/nunjucks
 ```js
 import getNunjucksLoader from "bunsai/loaders/nunjucks";
 
-const { loader, env } =
+const nunjucksLoader =
   getNunjucksLoader(/* (optional) root path and nunjucks configure options */);
 
-// you can make changes on the nunjucks Environment object (the 'env' object).
+nunjucksLoader.env;
+// you can make changes on the nunjucks Environment object (the 'nunjucksLoader.env' object).
 // See https://mozilla.github.io/nunjucks/api.html#environment
 
 BunSai({
   loaders: {
-    ".njk": loader,
+    ".njk": nunjucksLoader.loaderInit,
   },
 });
 ```
@@ -135,11 +136,11 @@ bun add sass @types/sass
 ```js
 import getSassLoader from "bunsai/loaders/sass";
 
-const loader = getSassLoader(/* (optional) sass compiler options */);
+const loaderInit = getSassLoader(/* (optional) sass compiler options */);
 
 BunSai({
   loaders: {
-    ".scss": loader,
+    ".scss": loaderInit,
   },
 });
 ```

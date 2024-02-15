@@ -7,6 +7,8 @@ export type Loader = (
   data: ModuleData
 ) => Response | Promise<Response>;
 
+export type LoaderInitiator = (bunsaiOpts: ResolvedBunSaiOptions) => Loader;
+
 export type ModuleContent = BodyInit | Response;
 
 export interface ModuleData {
@@ -31,17 +33,18 @@ export type Extname = `.${Lowercase<string>}`;
 
 export type LoaderMap = Record<Extname, Loader>;
 
+export type LoaderInitMap = Record<Extname, LoaderInitiator>;
+
 export interface BunSaiOptions {
   /**
-   * This option only applies to the `Bun.FileSystemRouter`.
-   * All loaders that use a root folder must use the same configuration.
+   * The root dir.
    * @default "./pages"
    */
   dir?: string;
   assetPrefix?: string;
   origin?: string;
   dev?: boolean;
-  loaders: LoaderMap;
+  loaders: LoaderInitMap;
   /**
    * Specify files to be served statically by file extension
    * @example
@@ -50,12 +53,10 @@ export interface BunSaiOptions {
   staticFiles?: Extname[];
 }
 
+export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
+
 export interface RecommendedOpts {
   nunjucks?: {
-    /**
-     * @default "./pages"
-     */
-    path?: string;
     options?: ConfigureOptions;
   };
   sass?: { options?: Options<"sync"> };
@@ -74,7 +75,7 @@ export interface Recommended {
             ".scss": Loader;
         }
      */
-  loaders: LoaderMap;
+  loaders: LoaderInitMap;
   /**
      * @default
      // web formats
@@ -100,7 +101,10 @@ export interface Recommended {
       ".woff2",
      */
   staticFiles: Extname[];
-  nunjucksEnv: Environment;
+  /**
+   * Undefined before loader initiation
+   */
+  readonly nunjucksEnv: Environment | undefined;
 }
 
 export interface BunSaiInstance {

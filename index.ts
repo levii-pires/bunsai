@@ -6,12 +6,19 @@ import type {
   BunSaiOptions,
   RequestMiddleware,
   BunSaiInstance,
+  ResolvedBunSaiOptions,
+  LoaderInitMap,
 } from "./types";
 import { StaticLoader } from "./loaders";
 import { extname } from "path";
 
-function getStatic(staticFiles: Extname[]) {
-  return Object.fromEntries(staticFiles.map((file) => [file, StaticLoader]));
+function getStatic(
+  staticFiles: Extname[],
+  resolvedOpts: ResolvedBunSaiOptions
+) {
+  const loader = StaticLoader(resolvedOpts);
+
+  return Object.fromEntries(staticFiles.map((file) => [file, loader]));
 }
 
 async function runMiddlewares(
@@ -26,23 +33,49 @@ async function runMiddlewares(
   }
 }
 
+function resolveOptions(options: BunSaiOptions): ResolvedBunSaiOptions {
+  return {
+    assetPrefix: options.assetPrefix || "",
+    dev: options.dev || false,
+    dir: options.dir || "./pages",
+    loaders: options.loaders,
+    origin: options.origin || "",
+    staticFiles: options.staticFiles || [],
+  };
+}
+
+function initLoaders(
+  loadersInit: LoaderInitMap,
+  resolvedOpts: ResolvedBunSaiOptions
+) {
+  const result: LoaderMap = {};
+
+  for (const key in loadersInit) {
+    result[key as Extname] = loadersInit[key as Extname](resolvedOpts);
+  }
+
+  return result;
+}
+
 export default function BunSai(opts: BunSaiOptions) {
+  const resolvedOpts = resolveOptions(opts);
+
   const router = new Bun.FileSystemRouter({
-    dir: opts.dir || "./pages",
+    dir: resolvedOpts.dir,
     style: "nextjs",
-    assetPrefix: opts.assetPrefix,
-    origin: opts.origin || "",
-    fileExtensions: (opts.staticFiles || []).concat(
-      Object.keys(opts.loaders) as Extname[]
+    assetPrefix: resolvedOpts.assetPrefix,
+    origin: resolvedOpts.origin,
+    fileExtensions: resolvedOpts.staticFiles.concat(
+      Object.keys(resolvedOpts.loaders) as Extname[]
     ),
   });
 
   const routeLoaders: LoaderMap = {};
 
   if (opts.staticFiles)
-    Object.assign(routeLoaders, getStatic(opts.staticFiles));
+    Object.assign(routeLoaders, getStatic(opts.staticFiles, resolvedOpts));
 
-  Object.assign(routeLoaders, opts.loaders);
+  Object.assign(routeLoaders, initLoaders(opts.loaders, resolvedOpts));
 
   const responseMiddlewares: Record<string, ResponseMiddleware> = {};
   const requestMiddlewares: Record<string, RequestMiddleware> = {};
