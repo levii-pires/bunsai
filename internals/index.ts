@@ -1,4 +1,4 @@
-import { StaticLoader } from "../loaders";
+import { StaticLoaderInit } from "../loaders";
 import type {
   Extname,
   ResolvedBunSaiOptions,
@@ -15,7 +15,7 @@ export function getStatic(
 ) {
   if (staticFiles.length == 0) return {};
 
-  const loader = StaticLoader(resolvedOpts);
+  const loader = StaticLoaderInit(resolvedOpts);
 
   return Object.fromEntries(staticFiles.map((file) => [file, loader]));
 }
