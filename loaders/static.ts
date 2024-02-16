@@ -1,6 +1,6 @@
 import type { LoaderInitiator } from "../types";
 
-const StaticLoader: LoaderInitiator = () => (filePath) =>
+const StaticLoaderInit: LoaderInitiator = () => (filePath) =>
   new Response(Bun.file(filePath));
 
-export default StaticLoader;
+export default StaticLoaderInit;
