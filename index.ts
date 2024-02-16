@@ -6,59 +6,20 @@ import type {
   BunSaiOptions,
   RequestMiddleware,
   ResolvedBunSaiOptions,
-  LoaderInitMap,
   MiddlewareTypes,
 } from "./types";
-import { StaticLoader } from "./loaders";
 import { extname } from "path";
+import {
+  resolveOptions,
+  getStatic,
+  initLoaders,
+  runMiddlewares,
+} from "./internals";
 
-function getStatic(
-  staticFiles: Extname[],
-  resolvedOpts: ResolvedBunSaiOptions
-) {
-  if (staticFiles.length == 0) return {};
-
-  const loader = StaticLoader(resolvedOpts);
-
-  return Object.fromEntries(staticFiles.map((file) => [file, loader]));
-}
-
-async function runMiddlewares<M extends RequestMiddleware | ResponseMiddleware>(
-  record: Record<string, M>,
-  data: Parameters<M>
-) {
-  for (const mid of Object.values(record)) {
-    // @ts-ignore
-    const result = await mid(...data);
-
-    if (result) return result;
-  }
-}
-
-function resolveOptions(options: BunSaiOptions): ResolvedBunSaiOptions {
-  return {
-    assetPrefix: options.assetPrefix || "",
-    dev: options.dev || false,
-    dir: options.dir || "./pages",
-    loaders: options.loaders,
-    origin: options.origin || "",
-    staticFiles: options.staticFiles || [],
-  };
-}
-
-function initLoaders(
-  loadersInit: LoaderInitMap,
-  resolvedOpts: ResolvedBunSaiOptions
-) {
-  const result: LoaderMap = {};
-
-  for (const key in loadersInit) {
-    result[key as Extname] = loadersInit[key as Extname](resolvedOpts);
-  }
-
-  return result;
-}
-
+/**
+ * The marked methods `$method(...)` are `this` dependent,
+ * while the non-marked methods `method(...)` are getters that returns a bound `$method`
+ */
 export default class BunSai {
   protected options: ResolvedBunSaiOptions;
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
@@ -91,16 +52,16 @@ export default class BunSai {
     );
   }
 
-  reloadRouter() {
+  $reloadRouter() {
     this.router.reload();
   }
 
-  addMiddleware(
+  $addMiddleware(
     name: string,
     type: Exclude<MiddlewareTypes, "request">,
     middleware: ResponseMiddleware
   ): this;
-  addMiddleware(
+  $addMiddleware(
     name: string,
     type: Extract<MiddlewareTypes, "request">,
     middleware: RequestMiddleware
@@ -109,7 +70,7 @@ export default class BunSai {
   /**
    * @returns `this` for chaining
    */
-  addMiddleware(
+  $addMiddleware(
     name: string,
     type: MiddlewareTypes,
     middleware: RequestMiddleware | ResponseMiddleware
@@ -128,7 +89,7 @@ export default class BunSai {
   /**
    * @returns `this` for chaining
    */
-  removeMiddleware(name: string, type: MiddlewareTypes) {
+  $removeMiddleware(name: string, type: MiddlewareTypes) {
     if (!(type in this.middlewareRecord))
       throw new Error(`unknown type '${type}'`);
 
@@ -137,7 +98,7 @@ export default class BunSai {
     return this;
   }
 
-  async fetch(request: Request, server: Server) {
+  async $fetch(request: Request, server: Server) {
     const reqResult = await runMiddlewares(this.middlewareRecord.request, [
       request,
       server,
@@ -177,6 +138,22 @@ export default class BunSai {
     ]);
 
     return resResult || response;
+  }
+
+  get addMiddleware(): typeof this.$addMiddleware {
+    return this.$addMiddleware.bind(this);
+  }
+
+  get removeMiddleware() {
+    return this.$removeMiddleware.bind(this);
+  }
+
+  get fetch() {
+    return this.$fetch.bind(this);
+  }
+
+  get reloadRouter() {
+    return this.$reloadRouter.bind(this);
   }
 }
 
