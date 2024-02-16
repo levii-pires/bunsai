@@ -1,5 +1,5 @@
-import type { Extname, LoaderMap, Recommended, RecommendedOpts } from "./types";
-import { ServerModules } from "./loaders";
+import type { Extname, Recommended, RecommendedOpts } from "./types";
+import { ModuleLoaderInit } from "./loaders";
 import getNunjucksLoader from "./loaders/nunjucks";
 import getSassLoader from "./loaders/sass";
 
@@ -12,7 +12,8 @@ export default function getRecommended(opts?: RecommendedOpts): Recommended {
     },
 
     loaders: {
-      ...ServerModules,
+      ".ts": ModuleLoaderInit,
+      ".tsx": ModuleLoaderInit,
       ".njk": nunjucks.loaderInit,
       ".scss": getSassLoader(opts?.sass?.options),
     },
