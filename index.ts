@@ -81,6 +81,11 @@ export default class BunSai {
     if (!(type in this.middlewareRecord))
       throw new Error(`unknown type '${type}'`);
 
+    if (name in this.middlewareRecord[type])
+      throw new Error(
+        `'${name}' already exists on the '${type}' middleware record`
+      );
+
     this.middlewareRecord[type][name] = middleware;
 
     return this;
