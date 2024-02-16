@@ -5,9 +5,9 @@ import type {
   ResponseMiddleware,
   BunSaiOptions,
   RequestMiddleware,
-  BunSaiInstance,
   ResolvedBunSaiOptions,
   LoaderInitMap,
+  MiddlewareTypes,
 } from "./types";
 import { StaticLoader } from "./loaders";
 import { extname } from "path";
@@ -16,14 +16,16 @@ function getStatic(
   staticFiles: Extname[],
   resolvedOpts: ResolvedBunSaiOptions
 ) {
+  if (staticFiles.length == 0) return {};
+
   const loader = StaticLoader(resolvedOpts);
 
   return Object.fromEntries(staticFiles.map((file) => [file, loader]));
 }
 
-async function runMiddlewares(
-  record: Record<string, RequestMiddleware | ResponseMiddleware>,
-  data: [Response, Request, Server] | [Request, Server]
+async function runMiddlewares<M extends RequestMiddleware | ResponseMiddleware>(
+  record: Record<string, M>,
+  data: Parameters<M>
 ) {
   for (const mid of Object.values(record)) {
     // @ts-ignore
@@ -57,123 +59,125 @@ function initLoaders(
   return result;
 }
 
-export default function BunSai(opts: BunSaiOptions) {
-  const resolvedOpts = resolveOptions(opts);
-
-  const router = new Bun.FileSystemRouter({
-    dir: resolvedOpts.dir,
-    style: "nextjs",
-    assetPrefix: resolvedOpts.assetPrefix,
-    origin: resolvedOpts.origin,
-    fileExtensions: resolvedOpts.staticFiles.concat(
-      Object.keys(resolvedOpts.loaders) as Extname[]
-    ),
-  });
-
-  const routeLoaders: LoaderMap = {};
-
-  if (opts.staticFiles)
-    Object.assign(routeLoaders, getStatic(opts.staticFiles, resolvedOpts));
-
-  Object.assign(routeLoaders, initLoaders(opts.loaders, resolvedOpts));
-
-  const responseMiddlewares: Record<string, ResponseMiddleware> = {};
-  const requestMiddlewares: Record<string, RequestMiddleware> = {};
-
-  const instance: BunSaiInstance = {
-    reloadRouter() {
-      router.reload();
-    },
-
-    /**
-     * @returns `this` for chaining
-     */
-    addMiddleware(name, type, middleware) {
-      if (typeof middleware != "function")
-        throw new TypeError("middleware must be a function");
-
-      switch (type) {
-        case "request": {
-          if (name in requestMiddlewares) {
-            throw new Error(`'${name}' middleware already exists`);
-          }
-
-          requestMiddlewares[name] = middleware as RequestMiddleware;
-
-          break;
-        }
-        case "response": {
-          if (name in responseMiddlewares) {
-            throw new Error(`'${name}' middleware already exists`);
-          }
-
-          responseMiddlewares[name] = middleware as ResponseMiddleware;
-
-          break;
-        }
-        default: {
-          throw new Error(`unknown type '${type}'`);
-        }
-      }
-
-      return instance;
-    },
-
-    /**
-     * @returns `this` for chaining
-     */
-    removeMiddleware(name, type) {
-      switch (type) {
-        case "response": {
-          delete responseMiddlewares[name];
-          break;
-        }
-        case "request": {
-          delete requestMiddlewares[name];
-          break;
-        }
-        default: {
-          throw new Error(`unknown type '${type}'`);
-        }
-      }
-
-      return instance;
-    },
-
-    async fetch(request: Request, server: Server) {
-      const reqResult = await runMiddlewares(requestMiddlewares, [
-        request,
-        server,
-      ]);
-
-      if (reqResult) return reqResult;
-
-      const route = router.match(request);
-
-      if (!route) return new Response(null, { status: 404 });
-
-      const loader =
-        routeLoaders[extname(route.filePath).toLowerCase() as Extname];
-
-      if (!loader)
-        return new Response(null, {
-          status: 500,
-          statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
-        });
-
-      const response = await loader(route.filePath, { server, request, route });
-
-      const resResult = await runMiddlewares(responseMiddlewares, [
-        response,
-        request,
-        server,
-      ]);
-
-      return resResult || response;
-    },
+export default class BunSai {
+  protected options: ResolvedBunSaiOptions;
+  protected router: InstanceType<typeof Bun.FileSystemRouter>;
+  protected routeLoaders: LoaderMap = {};
+  protected middlewareRecord = {
+    response: {} as Record<string, ResponseMiddleware>,
+    request: {} as Record<string, RequestMiddleware>,
+    ["not-found"]: {} as Record<string, ResponseMiddleware>,
   };
 
-  return instance;
+  constructor(options: BunSaiOptions) {
+    this.options = resolveOptions(options);
+
+    this.router = new Bun.FileSystemRouter({
+      ...this.options,
+      style: "nextjs",
+      fileExtensions: this.options.staticFiles.concat(
+        Object.keys(this.options.loaders) as Extname[]
+      ),
+    });
+
+    Object.assign(
+      this.routeLoaders,
+      getStatic(this.options.staticFiles, this.options)
+    );
+
+    Object.assign(
+      this.routeLoaders,
+      initLoaders(this.options.loaders, this.options)
+    );
+  }
+
+  reloadRouter() {
+    this.router.reload();
+  }
+
+  addMiddleware(
+    name: string,
+    type: Exclude<MiddlewareTypes, "request">,
+    middleware: ResponseMiddleware
+  ): this;
+  addMiddleware(
+    name: string,
+    type: Extract<MiddlewareTypes, "request">,
+    middleware: RequestMiddleware
+  ): this;
+
+  /**
+   * @returns `this` for chaining
+   */
+  addMiddleware(
+    name: string,
+    type: MiddlewareTypes,
+    middleware: RequestMiddleware | ResponseMiddleware
+  ) {
+    if (typeof middleware != "function")
+      throw new TypeError("middleware must be a function");
+
+    if (!(type in this.middlewareRecord))
+      throw new Error(`unknown type '${type}'`);
+
+    this.middlewareRecord[type][name] = middleware;
+
+    return this;
+  }
+
+  /**
+   * @returns `this` for chaining
+   */
+  removeMiddleware(name: string, type: MiddlewareTypes) {
+    if (!(type in this.middlewareRecord))
+      throw new Error(`unknown type '${type}'`);
+
+    delete this.middlewareRecord[type][name];
+
+    return this;
+  }
+
+  async fetch(request: Request, server: Server) {
+    const reqResult = await runMiddlewares(this.middlewareRecord.request, [
+      request,
+      server,
+    ]);
+
+    if (reqResult) return reqResult;
+
+    const route = this.router.match(request);
+
+    if (!route) {
+      const nfResult = new Response(null, { status: 404 });
+
+      const nfMidResult = await runMiddlewares(
+        this.middlewareRecord["not-found"],
+        [route, nfResult, request, server]
+      );
+
+      return nfMidResult || nfResult;
+    }
+
+    const loader =
+      this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
+
+    if (!loader)
+      return new Response(null, {
+        status: 500,
+        statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
+      });
+
+    const response = await loader(route.filePath, { server, request, route });
+
+    const resResult = await runMiddlewares(this.middlewareRecord.response, [
+      route,
+      response,
+      request,
+      server,
+    ]);
+
+    return resResult || response;
+  }
 }
 
 export type * from "./types";
