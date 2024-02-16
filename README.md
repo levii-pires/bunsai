@@ -19,7 +19,7 @@ And use it as a handler:
 ```js
 import BunSai from "bunsai";
 
-const { fetch } = BunSai({
+const { fetch } = new BunSai({
   /*
     "loaders" is the only required property, as it configures BunSai's behavior
   */
@@ -60,7 +60,7 @@ pages
 You can configure BonSai to serve those files:
 
 ```js
-BunSai({
+new BunSai({
   loaders: {
     ".njk": nunjucksLoaderInit,
     ".ts": apiLoaderInit,
@@ -105,7 +105,7 @@ nunjucksLoader.env;
 // you can make changes on the nunjucks Environment object (the 'nunjucksLoader.env' object).
 // See https://mozilla.github.io/nunjucks/api.html#environment
 
-BunSai({
+new BunSai({
   loaders: {
     ".njk": nunjucksLoader.loaderInit,
   },
@@ -138,7 +138,7 @@ import getSassLoader from "bunsai/loaders/sass";
 
 const loaderInit = getSassLoader(/* (optional) sass compiler options */);
 
-BunSai({
+new BunSai({
   loaders: {
     ".scss": loaderInit,
   },
@@ -154,7 +154,7 @@ BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and 
 ```js
 import { ModuleLoader } from "bunsai/loaders";
 
-BunSai({
+new BunSai({
   loaders: {
     ".ts": ModuleLoader,
   },
@@ -192,7 +192,7 @@ import getRecommended from "bunsai/recommended";
 const { loaders, staticFiles, nunjucksEnv } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
-BunSai({
+new BunSai({
   loaders,
   staticFiles,
 });
@@ -209,7 +209,7 @@ BunSai({
 You can use response middlewares to override or customize the response given by the loader.
 
 ```js
-const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
+const { addMiddleware, removeMiddleware } = new BunSai(/* ... */);
 
 addMiddleware(
   "name",
@@ -233,7 +233,7 @@ removeMiddleware("name", "response").removeMiddleware(/* can be chained */);
 You can use request middlewares to do things before `router.match`, the loader, and the [response-middlewares](#response-middlewares) kick in, including returning an early response (e.g. 429 Too Many Requests).
 
 ```js
-const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
+const { addMiddleware, removeMiddleware } = new BunSai(/* ... */);
 
 addMiddleware(
   "name",
