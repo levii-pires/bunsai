@@ -2,8 +2,6 @@ import { StaticLoaderInit } from "../loaders";
 import type {
   Extname,
   ResolvedBunSaiOptions,
-  RequestMiddleware,
-  ResponseMiddleware,
   BunSaiOptions,
   LoaderInitMap,
   LoaderMap,
@@ -18,17 +16,6 @@ export function getStatic(
   const loader = StaticLoaderInit(resolvedOpts);
 
   return Object.fromEntries(staticFiles.map((file) => [file, loader]));
-}
-
-export async function runMiddlewares<
-  M extends RequestMiddleware | ResponseMiddleware
->(record: Record<string, M>, data: Parameters<M>) {
-  for (const mid of Object.values(record)) {
-    // @ts-ignore
-    const result = await mid(...data);
-
-    if (result) return result;
-  }
 }
 
 export function resolveOptions(options: BunSaiOptions): ResolvedBunSaiOptions {

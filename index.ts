@@ -1,20 +1,13 @@
-import type { Server } from "bun";
+import type { MatchedRoute, Server } from "bun";
 import type {
   Extname,
   LoaderMap,
-  ResponseMiddleware,
   BunSaiOptions,
-  RequestMiddleware,
   ResolvedBunSaiOptions,
-  MiddlewareTypes,
 } from "./types";
 import { extname } from "path";
-import {
-  resolveOptions,
-  getStatic,
-  initLoaders,
-  runMiddlewares,
-} from "./internals";
+import { resolveOptions, getStatic, initLoaders } from "./internals";
+import MiddlewareChannel, { MiddlewareRecord } from "./internals/middleware";
 
 /**
  * The marked methods `$method(...)` are `this` dependent,
@@ -24,11 +17,17 @@ export default class BunSai {
   protected options: ResolvedBunSaiOptions;
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
   protected routeLoaders: LoaderMap = {};
-  protected middlewareRecord = {
-    response: {} as Record<string, ResponseMiddleware>,
-    request: {} as Record<string, RequestMiddleware>,
-    ["not-found"]: {} as Record<string, ResponseMiddleware>,
-  };
+
+  readonly middlewares = MiddlewareChannel.createMiddlewareRecord<{
+    response: {
+      response: Response;
+      request: Request;
+      server: Server;
+      route: MatchedRoute;
+    };
+    request: { request: Request; server: Server };
+    notFound: { request: Request; server: Server };
+  }>(["notFound", "request", "response"]);
 
   constructor(options: BunSaiOptions) {
     this.options = resolveOptions(options);
@@ -56,72 +55,20 @@ export default class BunSai {
     this.router.reload();
   }
 
-  $addMiddleware(
-    name: string,
-    type: Exclude<MiddlewareTypes, "request">,
-    middleware: ResponseMiddleware
-  ): this;
-  $addMiddleware(
-    name: string,
-    type: Extract<MiddlewareTypes, "request">,
-    middleware: RequestMiddleware
-  ): this;
-
-  /**
-   * @returns `this` for chaining
-   */
-  $addMiddleware(
-    name: string,
-    type: MiddlewareTypes,
-    middleware: RequestMiddleware | ResponseMiddleware
-  ) {
-    if (typeof middleware != "function")
-      throw new TypeError("middleware must be a function");
-
-    if (!(type in this.middlewareRecord))
-      throw new Error(`unknown type '${type}'`);
-
-    if (name in this.middlewareRecord[type])
-      throw new Error(
-        `'${name}' already exists on the '${type}' middleware record`
-      );
-
-    this.middlewareRecord[type][name] = middleware;
-
-    return this;
-  }
-
-  /**
-   * @returns `this` for chaining
-   */
-  $removeMiddleware(name: string, type: MiddlewareTypes) {
-    if (!(type in this.middlewareRecord))
-      throw new Error(`unknown type '${type}'`);
-
-    delete this.middlewareRecord[type][name];
-
-    return this;
-  }
-
   async $fetch(request: Request, server: Server) {
-    const reqResult = await runMiddlewares(this.middlewareRecord.request, [
-      request,
-      server,
-    ]);
+    const reqResult = await this.middlewares.request.call({ request, server });
 
     if (reqResult) return reqResult;
 
     const route = this.router.match(request);
 
     if (!route) {
-      const nfResult = new Response(null, { status: 404 });
+      const nfMidResult = await this.middlewares.notFound.call({
+        request,
+        server,
+      });
 
-      const nfMidResult = await runMiddlewares(
-        this.middlewareRecord["not-found"],
-        [route, nfResult, request, server]
-      );
-
-      return nfMidResult || nfResult;
+      return nfMidResult || new Response(null, { status: 404 });
     }
 
     const loader =
@@ -135,22 +82,32 @@ export default class BunSai {
 
     const response = await loader(route.filePath, { server, request, route });
 
-    const resResult = await runMiddlewares(this.middlewareRecord.response, [
+    const resResult = await this.middlewares.response.call({
       route,
       response,
       request,
       server,
-    ]);
+    });
 
     return resResult || response;
   }
 
-  get addMiddleware(): typeof this.$addMiddleware {
-    return this.$addMiddleware.bind(this);
+  /**
+   * @deprecated Since v0.2.0
+   */
+  addMiddleware() {
+    throw new Error(
+      "This method was removed on v0.2.0. Please use `middlewares` instead."
+    );
   }
 
-  get removeMiddleware() {
-    return this.$removeMiddleware.bind(this);
+  /**
+   * @deprecated Since v0.2.0
+   */
+  removeMiddleware() {
+    throw new Error(
+      "This method was removed on v0.2.0. Please use `middlewares` instead."
+    );
   }
 
   get fetch() {

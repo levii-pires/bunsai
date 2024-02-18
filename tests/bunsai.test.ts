@@ -2,7 +2,7 @@ import { describe, it, expect, mock } from "bun:test";
 import BunSai from "..";
 
 describe("BunSai", () => {
-  const { fetch, addMiddleware, removeMiddleware } = new BunSai({
+  const { fetch, middlewares } = new BunSai({
     loaders: {},
     staticFiles: [".html"],
     dir: "./tests/pages",
@@ -17,17 +17,17 @@ describe("BunSai", () => {
   });
 
   it("should comply with the request middleware spec", async () => {
-    addMiddleware("test", "request", () => new Response(null, { status: 300 }));
+    middlewares.request.add("test", () => new Response(null, { status: 300 }));
 
-    expect(() => addMiddleware("test", "request", () => {})).toThrow(
-      "'test' already exists on the 'request' middleware record"
+    expect(() => middlewares.request.add("test", () => {})).toThrow(
+      "'test' already exists on this middleware channel"
     );
 
     expect(
       (await server.fetch(new Request("http://test.bun/html"))).status
     ).toBe(300);
 
-    removeMiddleware("test", "request");
+    middlewares.request.remove("test");
 
     expect(
       (await server.fetch(new Request("http://test.bun/html"))).status
@@ -35,21 +35,17 @@ describe("BunSai", () => {
   });
 
   it("should comply with the response middleware spec", async () => {
-    addMiddleware(
-      "test",
-      "response",
-      () => new Response(null, { status: 300 })
-    );
+    middlewares.response.add("test", () => new Response(null, { status: 300 }));
 
-    expect(() => addMiddleware("test", "response", () => {})).toThrow(
-      "'test' already exists on the 'request' middleware record"
+    expect(() => middlewares.response.add("test", () => {})).toThrow(
+      "'test' already exists on this middleware channel"
     );
 
     expect(
       (await server.fetch(new Request("http://test.bun/html"))).status
     ).toBe(300);
 
-    removeMiddleware("test", "response");
+    middlewares.response.remove("test");
 
     expect(
       (await server.fetch(new Request("http://test.bun/html"))).status
