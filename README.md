@@ -61,7 +61,7 @@ pages
 └── [[...catchall]].vue
 ```
 
-You can configure BonSai to serve those files:
+You can configure BunSai to serve those files:
 
 ```js
 new BunSai({
