@@ -34,9 +34,16 @@ export default class MiddlewareChannel<Data> {
     return this;
   }
 
-  async call(data: Data) {
-    for (const middleware of Object.values(this.middlewares)) {
+  /**
+   * @param debug Check how long each middleware is taking to run
+   */
+  async call(data: Data, debug?: boolean) {
+    for (const [name, middleware] of Object.entries(this.middlewares)) {
+      if (debug) console.time(`middleware: ${name}`);
+
       const result = await middleware(data);
+
+      if (debug) console.timeEnd(`middleware: ${name}`);
 
       if (result) return result;
     }

@@ -56,17 +56,23 @@ export default class BunSai {
   }
 
   async $fetch(request: Request, server: Server) {
-    const reqResult = await this.middlewares.request.call({ request, server });
+    const reqResult = await this.middlewares.request.call(
+      { request, server },
+      this.options.dev
+    );
 
     if (reqResult) return reqResult;
 
     const route = this.router.match(request);
 
     if (!route) {
-      const nfMidResult = await this.middlewares.notFound.call({
-        request,
-        server,
-      });
+      const nfMidResult = await this.middlewares.notFound.call(
+        {
+          request,
+          server,
+        },
+        this.options.dev
+      );
 
       return nfMidResult || new Response(null, { status: 404 });
     }
@@ -82,12 +88,15 @@ export default class BunSai {
 
     const response = await loader(route.filePath, { server, request, route });
 
-    const resResult = await this.middlewares.response.call({
-      route,
-      response,
-      request,
-      server,
-    });
+    const resResult = await this.middlewares.response.call(
+      {
+        route,
+        response,
+        request,
+        server,
+      },
+      this.options.dev
+    );
 
     return resResult || response;
   }
