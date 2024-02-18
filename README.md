@@ -257,9 +257,7 @@ const { middlewares } = new BunSai(/* ... */);
 
 middlewares.notFound
   .add("name", (data) => {
-    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
-    // sending the given response to the client.
-    return new Response();
+    /* ... */
   })
   .add(/* can be chained */);
 
