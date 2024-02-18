@@ -12,7 +12,7 @@ As the version implies (v0.x.x), this API is not yet stable and can be breaking 
 
 ## Quick start
 
-BunSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BunSai is a full-stack, zero dependency, agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
 
 ```sh
 bun add bunsai
