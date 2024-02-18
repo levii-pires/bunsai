@@ -10,6 +10,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "20"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: "bun test"
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}

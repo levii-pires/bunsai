@@ -1,6 +1,6 @@
-import { Module, Loader } from "../types";
+import type { Module, LoaderInitiator } from "../types";
 
-const ModuleLoader: Loader = async (filePath, data) => {
+const ModuleLoaderInit: LoaderInitiator = () => async (filePath, data) => {
   const { handler, headers } = (await import(filePath)) as Module;
 
   if (typeof handler != "function")
@@ -18,4 +18,4 @@ const ModuleLoader: Loader = async (filePath, data) => {
   });
 };
 
-export default ModuleLoader;
+export default ModuleLoaderInit;

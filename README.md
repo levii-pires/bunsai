@@ -6,6 +6,10 @@
 
 > Bonsai is a japanese art of growing and shaping miniature trees in containers
 
+## **BIG NOTE**
+
+As the version implies (v0.x.x), this API is not yet stable and can be breaking changed without warnings.
+
 ## Quick start
 
 BunSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
@@ -19,7 +23,7 @@ And use it as a handler:
 ```js
 import BunSai from "bunsai";
 
-const { fetch } = BunSai({
+const { fetch } = new BunSai({
   /*
     "loaders" is the only required property, as it configures BunSai's behavior
   */
@@ -37,7 +41,7 @@ Powered by [`Bun.FileSystemRouter`](https://bun.sh/docs/api/file-system-router) 
 
 ```js
 loaders: {
-  ".ext": loader
+  ".ext": loaderInitiator
 }
 ```
 
@@ -60,18 +64,18 @@ pages
 You can configure BonSai to serve those files:
 
 ```js
-BunSai({
+new BunSai({
   loaders: {
-    ".njk": nunjucksLoader,
-    ".ts": apiLoader,
-    ".tsx": reactLoader,
-    ".svelte": svelteLoader,
-    ".vue": vueLoader,
+    ".njk": nunjucksLoaderInit,
+    ".ts": apiLoaderInit,
+    ".tsx": reactLoaderInit,
+    ".svelte": svelteLoaderInit,
+    ".vue": vueLoaderInit,
   },
 });
 ```
 
-> Check the [`Loader`](./types.ts#L5) interface
+> Check the [`LoaderInitiator`](./types.ts#L10) interface
 
 You can also specify file extensions that will be served staticly (`return new Response(Bun.file(filePath))`), like so:
 
@@ -87,7 +91,7 @@ BunSai is 100% flexible, but this does not mean that it cannot be opinionated. B
 
 ### [Nunjucks](https://mozilla.github.io/nunjucks/)
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 Nunjucks is a rich powerful templating language with block inheritance, autoescaping, macros, asynchronous control, and more. Heavily inspired by jinja2.
 
@@ -98,15 +102,16 @@ bun add nunjucks @types/nunjucks
 ```js
 import getNunjucksLoader from "bunsai/loaders/nunjucks";
 
-const { loader, env } =
+const nunjucksLoader =
   getNunjucksLoader(/* (optional) root path and nunjucks configure options */);
 
-// you can make changes on the nunjucks Environment object (the 'env' object).
+nunjucksLoader.env;
+// you can make changes on the nunjucks Environment object (the 'nunjucksLoader.env' object).
 // See https://mozilla.github.io/nunjucks/api.html#environment
 
-BunSai({
+new BunSai({
   loaders: {
-    ".njk": loader,
+    ".njk": nunjucksLoader.loaderInit,
   },
 });
 ```
@@ -124,7 +129,7 @@ BunSai({
 
 ### [Sass](https://sass-lang.com/)
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 Sass is the most mature, stable, and powerful professional grade CSS extension language in the world.
 
@@ -135,25 +140,25 @@ bun add sass @types/sass
 ```js
 import getSassLoader from "bunsai/loaders/sass";
 
-const loader = getSassLoader(/* (optional) sass compiler options */);
+const loaderInit = getSassLoader(/* (optional) sass compiler options */);
 
-BunSai({
+new BunSai({
   loaders: {
-    ".scss": loader,
+    ".scss": loaderInit,
   },
 });
 ```
 
 ### Module
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
 import { ModuleLoader } from "bunsai/loaders";
 
-BunSai({
+new BunSai({
   loaders: {
     ".ts": ModuleLoader,
   },
@@ -181,17 +186,17 @@ export function handler(data: ModuleData) {
 
 ### Recommended
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 If you liked BunSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
 import getRecommended from "bunsai/recommended";
 
-const { loaders, staticFiles, nunjucksEnv } =
+const { loaders, staticFiles } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
-BunSai({
+new BunSai({
   loaders,
   staticFiles,
 });
@@ -201,30 +206,62 @@ BunSai({
 
 ## Middlewares
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
-You can use middlewares to override or customize the response given by the loader.
+### Response Middlewares
+
+You can use response middlewares to override or customize the response given by the loader.
 
 ```js
-const { addMiddleware, removeMiddleware } = BunSai(/* ... */);
+const { middlewares } = new BunSai(/* ... */);
 
-addMiddleware(
-  "name it so you can remove it later",
-  (response, request, server) => {
+middlewares.response
+  .add("name", (data) => {
     // you can stop the middleware execution chain by returning a Response
 
     // if you want to stop the chain and override the response, return a new Response object
     return new Response();
 
     // if you want to just stop the chain, return the same Response object
-    return response;
-  }
-)
-  .addMiddleware(/* can be chained */);
+    return data.response;
+  })
+  .add(/* can be chained */);
 
-removeMiddleware(
-  "name it so you can remove it later"
-)
-  .removeMiddleware(/* can be chained */);
+middlewares.response.remove("name").remove(/* can be chained */);
 ```
 
+### Request Middlewares
+
+You can use request middlewares to do things before anything else, like sending an early response (e.g. 429 Too Many Requests).
+
+```js
+const { middlewares } = new BunSai(/* ... */);
+
+middlewares.request
+  .add("name", (data) => {
+    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
+    // sending the given response to the client.
+    return new Response();
+  })
+  .add(/* can be chained */);
+
+middlewares.request.remove("name").remove(/* can be chained */);
+```
+
+### "Not Found" Middlewares
+
+"Not Found" middlewares are only called when the router did not found the asset. The main purpose of the NF middleware is to override the default behavior (sending an empty 404 response).
+
+```js
+const { middlewares } = new BunSai(/* ... */);
+
+middlewares.notFound
+  .add("name", (data) => {
+    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
+    // sending the given response to the client.
+    return new Response();
+  })
+  .add(/* can be chained */);
+
+middlewares.notFound.remove("name").remove(/* can be chained */);
+```

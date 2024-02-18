@@ -1,6 +1,6 @@
 {
   "name": "bunsai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
@@ -17,16 +17,16 @@
     "sass": "^1.70.0"
   },
   "engines": {
-    "bun": "1"
+    "bun": ">=1.0.26"
   },
   "files": [
     "loaders",
     "index.ts",
     "types.ts",
-    "recommended.ts"
+    "recommended.ts",
+    "internals"
   ],
   "license": "MIT",
   "private": false,
   "type": "module"
 }
-

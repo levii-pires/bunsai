@@ -1,87 +1,131 @@
-import type { Server } from "bun";
-import type { Extname, LoaderMap, Middleware, ServerOptions } from "./types";
-import { StaticLoader } from "./loaders";
+import type { MatchedRoute, Server } from "bun";
+import type {
+  Extname,
+  LoaderMap,
+  BunSaiOptions,
+  ResolvedBunSaiOptions,
+} from "./types";
 import { extname } from "path";
+import { resolveOptions, getStatic, initLoaders } from "./internals";
+import MiddlewareChannel, { MiddlewareRecord } from "./internals/middleware";
 
-function getStatic(staticFiles: Extname[]) {
-  return Object.fromEntries(staticFiles.map((file) => [file, StaticLoader]));
-}
+/**
+ * The marked methods `$method(...)` are `this` dependent,
+ * while the non-marked methods `method(...)` are getters that returns a bound `$method`
+ */
+export default class BunSai {
+  protected options: ResolvedBunSaiOptions;
+  protected router: InstanceType<typeof Bun.FileSystemRouter>;
+  protected routeLoaders: LoaderMap = {};
 
-export default function BunSai(opts: ServerOptions) {
-  const router = new Bun.FileSystemRouter({
-    dir: opts.dir || "./pages",
-    style: "nextjs",
-    assetPrefix: opts.assetPrefix,
-    origin: opts.origin || "",
-    fileExtensions: (opts.staticFiles || []).concat(
-      Object.keys(opts.loaders) as Extname[]
-    ),
-  });
+  readonly middlewares = MiddlewareChannel.createMiddlewareRecord<{
+    response: {
+      response: Response;
+      request: Request;
+      server: Server;
+      route: MatchedRoute;
+    };
+    request: { request: Request; server: Server };
+    notFound: { request: Request; server: Server };
+  }>(["notFound", "request", "response"]);
 
-  const routeLoaders: LoaderMap = {};
+  constructor(options: BunSaiOptions) {
+    this.options = resolveOptions(options);
 
-  if (opts.staticFiles)
-    Object.assign(routeLoaders, getStatic(opts.staticFiles));
+    this.router = new Bun.FileSystemRouter({
+      ...this.options,
+      style: "nextjs",
+      fileExtensions: this.options.staticFiles.concat(
+        Object.keys(this.options.loaders) as Extname[]
+      ),
+    });
 
-  Object.assign(routeLoaders, opts.loaders);
+    Object.assign(
+      this.routeLoaders,
+      getStatic(this.options.staticFiles, this.options)
+    );
 
-  const middlewares: Record<string, Middleware> = {};
+    Object.assign(
+      this.routeLoaders,
+      initLoaders(this.options.loaders, this.options)
+    );
+  }
 
-  const instance = {
-    reloadRouter() {
-      router.reload();
-    },
+  $reloadRouter() {
+    this.router.reload();
+  }
 
-    /**
-     * @returns `this` for chaining
-     */
-    addMiddleware(name: string, middleware: Middleware) {
-      if (typeof middleware != "function")
-        throw new TypeError("middleware must be a function");
+  async $fetch(request: Request, server: Server) {
+    const reqResult = await this.middlewares.request.call(
+      { request, server },
+      this.options.dev
+    );
 
-      if (name in middlewares) {
-        throw new Error(`'${name}' middleware already exists`);
-      }
+    if (reqResult) return reqResult;
 
-      middlewares[name] = middleware;
+    const route = this.router.match(request);
 
-      return instance;
-    },
+    if (!route) {
+      const nfMidResult = await this.middlewares.notFound.call(
+        {
+          request,
+          server,
+        },
+        this.options.dev
+      );
 
-    /**
-     * @returns `this` for chaining
-     */
-    removeMiddleware(name: string) {
-      delete middlewares[name];
-      return instance;
-    },
-    async fetch(request: Request, server: Server) {
-      const route = router.match(request);
+      return nfMidResult || new Response(null, { status: 404 });
+    }
 
-      if (!route) return new Response(null, { status: 404 });
+    const loader =
+      this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
 
-      const loader =
-        routeLoaders[extname(route.filePath).toLowerCase() as Extname];
+    if (!loader)
+      return new Response(null, {
+        status: 500,
+        statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
+      });
 
-      if (!loader)
-        return new Response(null, {
-          status: 500,
-          statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
-        });
+    const response = await loader(route.filePath, { server, request, route });
 
-      const response = await loader(route.filePath, { server, request, route });
+    const resResult = await this.middlewares.response.call(
+      {
+        route,
+        response,
+        request,
+        server,
+      },
+      this.options.dev
+    );
 
-      for (const mid of Object.values(middlewares)) {
-        const result = await mid(response, request, server);
+    return resResult || response;
+  }
 
-        if (result) return result;
-      }
+  /**
+   * @deprecated Since v0.2.0
+   */
+  addMiddleware() {
+    throw new Error(
+      "This method was removed on v0.2.0. Please use `middlewares` instead."
+    );
+  }
 
-      return response;
-    },
-  };
+  /**
+   * @deprecated Since v0.2.0
+   */
+  removeMiddleware() {
+    throw new Error(
+      "This method was removed on v0.2.0. Please use `middlewares` instead."
+    );
+  }
 
-  return instance;
+  get fetch() {
+    return this.$fetch.bind(this);
+  }
+
+  get reloadRouter() {
+    return this.$reloadRouter.bind(this);
+  }
 }
 
 export type * from "./types";

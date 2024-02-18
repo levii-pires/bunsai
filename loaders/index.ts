@@ -1,9 +1,2 @@
-import ModuleLoader from "./module";
-
-export { default as ModuleLoader } from "./module";
-export { default as StaticLoader } from "./static";
-
-export const ServerModules = {
-  ".ts": ModuleLoader,
-  ".tsx": ModuleLoader,
-} as const;
+export { default as ModuleLoaderInit } from "./module";
+export { default as StaticLoaderInit } from "./static";
