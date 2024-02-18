@@ -6,6 +6,10 @@
 
 > Bonsai is a japanese art of growing and shaping miniature trees in containers
 
+## **BIG NOTE**
+
+As the version implies (v0.x.x), this API is not yet stable and can be breaking changed without warnings.
+
 ## Quick start
 
 BunSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
@@ -125,7 +129,7 @@ new BunSai({
 
 ### [Sass](https://sass-lang.com/)
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 Sass is the most mature, stable, and powerful professional grade CSS extension language in the world.
 
@@ -147,7 +151,7 @@ new BunSai({
 
 ### Module
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
@@ -182,14 +186,14 @@ export function handler(data: ModuleData) {
 
 ### Recommended
 
-> Since v0.1.0
+> Since v0.1.0. Last change v0.2.0
 
 If you liked BunSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
 import getRecommended from "bunsai/recommended";
 
-const { loaders, staticFiles, nunjucksEnv } =
+const { loaders, staticFiles } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
 new BunSai({
@@ -209,41 +213,55 @@ new BunSai({
 You can use response middlewares to override or customize the response given by the loader.
 
 ```js
-const { addMiddleware, removeMiddleware } = new BunSai(/* ... */);
+const { middlewares } = new BunSai(/* ... */);
 
-addMiddleware(
-  "name",
-  "response", // middleware type
-  (response, request, server) => {
+middlewares.response
+  .add("name", (data) => {
     // you can stop the middleware execution chain by returning a Response
 
     // if you want to stop the chain and override the response, return a new Response object
     return new Response();
 
     // if you want to just stop the chain, return the same Response object
-    return response;
-  }
-).addMiddleware(/* can be chained */);
+    return data.response;
+  })
+  .add(/* can be chained */);
 
-removeMiddleware("name", "response").removeMiddleware(/* can be chained */);
+middlewares.response.remove("name").remove(/* can be chained */);
 ```
 
 ### Request Middlewares
 
-You can use request middlewares to do things before `router.match`, the loader, and the [response-middlewares](#response-middlewares) kick in, including returning an early response (e.g. 429 Too Many Requests).
+You can use request middlewares to do things before anything else, like sending an early response (e.g. 429 Too Many Requests).
 
 ```js
-const { addMiddleware, removeMiddleware } = new BunSai(/* ... */);
+const { middlewares } = new BunSai(/* ... */);
 
-addMiddleware(
-  "name",
-  "request", // middleware type
-  (request, server) => {
-    // you can stop the middleware execution chain by returning a Response
-    // if you want to stop the chain and override the response, return a new Response object
+middlewares.request
+  .add("name", (data) => {
+    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
+    // sending the given response to the client.
     return new Response();
-  }
-).addMiddleware(/* can be chained */);
+  })
+  .add(/* can be chained */);
 
-removeMiddleware("name", "request").removeMiddleware(/* can be chained */);
+middlewares.request.remove("name").remove(/* can be chained */);
+```
+
+### "Not Found" Middlewares
+
+"Not Found" middlewares are only called when the router did not found the asset. The main purpose of the NF middleware is to override the default behavior (sending an empty 404 response).
+
+```js
+const { middlewares } = new BunSai(/* ... */);
+
+middlewares.notFound
+  .add("name", (data) => {
+    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
+    // sending the given response to the client.
+    return new Response();
+  })
+  .add(/* can be chained */);
+
+middlewares.notFound.remove("name").remove(/* can be chained */);
 ```
