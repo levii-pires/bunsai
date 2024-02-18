@@ -156,11 +156,11 @@ new BunSai({
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
-import { ModuleLoader } from "bunsai/loaders";
+import { ModuleLoaderInit } from "bunsai/loaders";
 
 new BunSai({
   loaders: {
-    ".ts": ModuleLoader,
+    ".ts": ModuleLoaderInit,
   },
 });
 ```
