@@ -138,6 +138,11 @@ export interface BunSaiMiddlewareRecord {
     request: Request;
     server: Server;
   };
+  error: {
+    request: Request;
+    server: Server;
+    error: unknown;
+  };
 }
 
 export {};

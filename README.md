@@ -206,9 +206,9 @@ new BunSai({
 
 ## Middlewares
 
-> Since v0.1.0. Last change v0.2.0
-
 ### Response Middlewares
+
+> Since v0.1.0. Last change v0.2.0
 
 You can use response middlewares to override or customize the response given by the loader.
 
@@ -232,6 +232,8 @@ middlewares.response.remove("name").remove(/* can be chained */);
 
 ### Request Middlewares
 
+> Since v0.1.0. Last change v0.2.0
+
 You can use request middlewares to do things before anything else, like sending an early response (e.g. 429 Too Many Requests).
 
 ```js
@@ -250,6 +252,8 @@ middlewares.request.remove("name").remove(/* can be chained */);
 
 ### "Not Found" Middlewares
 
+> Since v0.1.0. Last change v0.2.0
+
 "Not Found" middlewares are only called when the router did not found the asset. The main purpose of the NF middleware is to override the default behavior (sending an empty 404 response).
 
 ```js
@@ -262,4 +266,22 @@ middlewares.notFound
   .add(/* can be chained */);
 
 middlewares.notFound.remove("name").remove(/* can be chained */);
+```
+
+### Error Middlewares
+
+> Since v0.3.0
+
+"Error" middlewares are only called when something went really wrong. The main purpose of the error middleware is to override the default behavior (let Bun handle it).
+
+```js
+const { middlewares } = new BunSai(/* ... */);
+
+middlewares.error
+  .add("name", (data) => {
+    /* ... */
+  })
+  .add(/* can be chained */);
+
+middlewares.error.remove("name").remove(/* can be chained */);
 ```

@@ -7,8 +7,13 @@ import type {
   BunSaiMiddlewareRecord,
 } from "./types";
 import { extname } from "path";
-import { resolveOptions, getStatic, initLoaders } from "./internals";
-import MiddlewareChannel from "./internals/middleware";
+import {
+  resolveOptions,
+  getStatic,
+  initLoaders,
+  MiddlewareChannel,
+  LoaderNotFoundError,
+} from "./internals";
 
 /**
  * The marked methods `$method(...)` are `this` dependent,
@@ -53,49 +58,57 @@ export default class BunSai {
   }
 
   async $fetch(request: Request, server: Server) {
-    const reqResult = await this.middlewares.request.call(
-      { request, server },
-      this.options.dev
-    );
+    try {
+      const reqResult = await this.middlewares.request.call(
+        { request, server },
+        this.options.dev
+      );
 
-    if (reqResult) return reqResult;
+      if (reqResult) return reqResult;
 
-    const route = this.router.match(request);
+      const route = this.router.match(request);
 
-    if (!route) {
-      const nfMidResult = await this.middlewares.notFound.call(
+      if (!route) {
+        const nfMidResult = await this.middlewares.notFound.call(
+          {
+            request,
+            server,
+          },
+          this.options.dev
+        );
+
+        return nfMidResult || new Response(null, { status: 404 });
+      }
+
+      const loader =
+        this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
+
+      if (!loader) throw new LoaderNotFoundError(request);
+
+      const response = await loader(route.filePath, { server, request, route });
+
+      const resResult = await this.middlewares.response.call(
         {
+          route,
+          response,
           request,
           server,
         },
         this.options.dev
       );
 
-      return nfMidResult || new Response(null, { status: 404 });
-    }
-
-    const loader =
-      this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
-
-    if (!loader)
-      return new Response(null, {
-        status: 500,
-        statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
-      });
-
-    const response = await loader(route.filePath, { server, request, route });
-
-    const resResult = await this.middlewares.response.call(
-      {
-        route,
-        response,
+      return resResult || response;
+    } catch (error) {
+      const errResult = await this.middlewares.error.call({
+        error,
         request,
         server,
-      },
-      this.options.dev
-    );
+      });
 
-    return resResult || response;
+      if (errResult) return errResult;
+
+      throw error;
+    }
   }
 
   /**
