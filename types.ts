@@ -44,6 +44,16 @@ export interface BunSaiOptions {
   assetPrefix?: string;
   origin?: string;
   dev?: boolean;
+  /**
+   * @example
+   * loaders: {
+    ".njk": nunjucksLoaderInit,
+    ".ts": apiLoaderInit,
+    ".tsx": reactLoaderInit,
+    ".svelte": svelteLoaderInit,
+    ".vue": vueLoaderInit,
+    }
+   */
   loaders: LoaderInitMap;
   /**
    * Specify files to be served statically by file extension
@@ -112,5 +122,22 @@ export type MiddlewareResult = Response | void;
 export type Middleware<Data> = (
   data: Data
 ) => MiddlewareResult | Promise<MiddlewareResult>;
+
+export interface BunSaiMiddlewareRecord {
+  response: {
+    response: Response;
+    request: Request;
+    server: Server;
+    route: MatchedRoute;
+  };
+  request: {
+    request: Request;
+    server: Server;
+  };
+  notFound: {
+    request: Request;
+    server: Server;
+  };
+}
 
 export {};
