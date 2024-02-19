@@ -1,13 +1,14 @@
-import type { MatchedRoute, Server } from "bun";
+import type { Server } from "bun";
 import type {
   Extname,
   LoaderMap,
   BunSaiOptions,
   ResolvedBunSaiOptions,
+  BunSaiMiddlewareRecord,
 } from "./types";
 import { extname } from "path";
 import { resolveOptions, getStatic, initLoaders } from "./internals";
-import MiddlewareChannel, { MiddlewareRecord } from "./internals/middleware";
+import MiddlewareChannel from "./internals/middleware";
 
 /**
  * The marked methods `$method(...)` are `this` dependent,
@@ -18,16 +19,12 @@ export default class BunSai {
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
   protected routeLoaders: LoaderMap = {};
 
-  readonly middlewares = MiddlewareChannel.createMiddlewareRecord<{
-    response: {
-      response: Response;
-      request: Request;
-      server: Server;
-      route: MatchedRoute;
-    };
-    request: { request: Request; server: Server };
-    notFound: { request: Request; server: Server };
-  }>(["notFound", "request", "response"]);
+  readonly middlewares =
+    MiddlewareChannel.createMiddlewareRecord<BunSaiMiddlewareRecord>([
+      "notFound",
+      "request",
+      "response",
+    ]);
 
   constructor(options: BunSaiOptions) {
     this.options = resolveOptions(options);
@@ -104,7 +101,7 @@ export default class BunSai {
   /**
    * @deprecated Since v0.2.0
    */
-  addMiddleware() {
+  addMiddleware(): never {
     throw new Error(
       "This method was removed on v0.2.0. Please use `middlewares` instead."
     );
@@ -113,7 +110,7 @@ export default class BunSai {
   /**
    * @deprecated Since v0.2.0
    */
-  removeMiddleware() {
+  removeMiddleware(): never {
     throw new Error(
       "This method was removed on v0.2.0. Please use `middlewares` instead."
     );

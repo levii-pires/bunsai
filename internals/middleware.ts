@@ -8,8 +8,9 @@ export default class MiddlewareChannel<Data> {
   protected middlewares: Record<string, Middleware<Data>> = {};
 
   /**
-   * The maximum amount of middlewares on this channel
-   * @default 100
+   * The maximum amount of middlewares on this channel.
+   *
+   * Initial value: `100`
    */
   limit = 100;
 
@@ -54,7 +55,7 @@ export default class MiddlewareChannel<Data> {
   }
 
   static createMiddlewareRecord<MiddlewareMap extends Record<string, any>>(
-    channels: (keyof MiddlewareMap)[]
+    channels: Array<keyof MiddlewareMap>
   ): MiddlewareRecord<MiddlewareMap> {
     return Object.fromEntries(
       channels.map((channel) => [channel, new this()])

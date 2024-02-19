@@ -12,7 +12,7 @@ As the version implies (v0.x.x), this API is not yet stable and can be breaking 
 
 ## Quick start
 
-BunSai is a full-stack agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BunSai is a full-stack, zero dependency, agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
 
 ```sh
 bun add bunsai
@@ -61,7 +61,7 @@ pages
 └── [[...catchall]].vue
 ```
 
-You can configure BonSai to serve those files:
+You can configure BunSai to serve those files:
 
 ```js
 new BunSai({
@@ -156,11 +156,11 @@ new BunSai({
 BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
-import { ModuleLoader } from "bunsai/loaders";
+import { ModuleLoaderInit } from "bunsai/loaders";
 
 new BunSai({
   loaders: {
-    ".ts": ModuleLoader,
+    ".ts": ModuleLoaderInit,
   },
 });
 ```
@@ -257,9 +257,7 @@ const { middlewares } = new BunSai(/* ... */);
 
 middlewares.notFound
   .add("name", (data) => {
-    // returning a response on the 'request' phase will stop both the middleware execution chain and all other operations,
-    // sending the given response to the client.
-    return new Response();
+    /* ... */
   })
   .add(/* can be chained */);
 
