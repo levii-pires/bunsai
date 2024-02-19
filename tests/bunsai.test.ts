@@ -1,54 +1,40 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, it, expect, afterAll } from "bun:test";
 import BunSai from "..";
+import getNunjucksLoader from "../loaders/nunjucks";
+
+const njkLoader = getNunjucksLoader();
+
+const { fetch } = new BunSai({
+  loaders: { ".njk": njkLoader.loaderInit },
+  staticFiles: [".html"],
+  dir: "./tests/pages",
+});
+
+const server = Bun.serve({ fetch });
+
+afterAll(() => {
+  server.unref();
+  server.stop();
+});
 
 describe("BunSai", () => {
-  const { fetch, middlewares } = new BunSai({
-    loaders: {},
-    staticFiles: [".html"],
-    dir: "./tests/pages",
-  });
-
-  const server = Bun.serve({ fetch });
-
   it("should serve static html", async () => {
     const response = await server.fetch(new Request("http://test.bun/html"));
 
     expect(await response.text()).toInclude("<title>Document</title>");
   });
 
-  it("should comply with the request middleware spec", async () => {
-    middlewares.request.add("test", () => new Response(null, { status: 300 }));
+  it("should return 404", async () => {
+    const response = await server.fetch(new Request("http://test.bun/nf"));
 
-    expect(() => middlewares.request.add("test", () => {})).toThrow(
-      "'test' already exists on this middleware channel"
-    );
-
-    expect(
-      (await server.fetch(new Request("http://test.bun/html"))).status
-    ).toBe(300);
-
-    middlewares.request.remove("test");
-
-    expect(
-      (await server.fetch(new Request("http://test.bun/html"))).status
-    ).toBe(200);
+    expect(response).toHaveProperty("status", 404);
   });
 
-  it("should comply with the response middleware spec", async () => {
-    middlewares.response.add("test", () => new Response(null, { status: 300 }));
-
-    expect(() => middlewares.response.add("test", () => {})).toThrow(
-      "'test' already exists on this middleware channel"
+  it("should use loaders", async () => {
+    const response = await server.fetch(
+      new Request("http://test.bun/nunjucks")
     );
 
-    expect(
-      (await server.fetch(new Request("http://test.bun/html"))).status
-    ).toBe(300);
-
-    middlewares.response.remove("test");
-
-    expect(
-      (await server.fetch(new Request("http://test.bun/html"))).status
-    ).toBe(200);
+    expect(await response.text()).toInclude("http://test.bun/nunjucks");
   });
 });
