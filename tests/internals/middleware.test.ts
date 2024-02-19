@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import MiddlewareChannel from "../internals/middleware";
+import MiddlewareChannel from "../../internals/middleware";
 
 const middleware = new MiddlewareChannel();
 
