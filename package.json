@@ -4,6 +4,9 @@
   "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
+  "bugs": {
+    "url": "https://github.com/levii-pires/bunsai/issues"
+  },
   "module": "./index.ts",
   "devDependencies": {
     "@types/bun": "^1.0.4",
