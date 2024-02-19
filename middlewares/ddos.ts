@@ -3,9 +3,9 @@ import type { MiddlewareRecord } from "../internals";
 
 export interface DDOSMiddlewareOptions {
   /**
-   * @default 100
+   * @default 20
    */
-  maxRequestsPerSecond?: number;
+  limit?: number;
 
   /**
    * Cooldown time in milliseconds
@@ -20,7 +20,7 @@ const middlewareName = "@builtin.ddos";
 /**
  * @returns A function to remove this middleware from the record
  */
-export default function DDOSMiddleware(
+export default function DDOS(
   middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
   options: DDOSMiddlewareOptions = {}
 ) {
@@ -43,7 +43,7 @@ export default function DDOSMiddleware(
       delete requestCountTable[addr.address];
     }, options.cooldown || 1000);
 
-    if (currentCount >= (options.maxRequestsPerSecond || 100))
+    if (currentCount >= (options.limit || 20))
       return new Response(null, {
         status: 429,
         statusText: "429 Too Many Requests",
