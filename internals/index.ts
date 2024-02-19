@@ -41,3 +41,7 @@ export function initLoaders(
 
   return result;
 }
+
+export { default as MiddlewareChannel } from "./middleware";
+export type { MiddlewareRecord } from "./middleware";
+export * from "./errors";
