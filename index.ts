@@ -15,10 +15,6 @@ import {
   LoaderNotFoundError,
 } from "./internals";
 
-/**
- * The marked methods `$method(...)` are `this` dependent,
- * while the non-marked methods `method(...)` are getters that returns a bound `$method`
- */
 export default class BunSai {
   protected options: ResolvedBunSaiOptions;
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
@@ -56,11 +52,11 @@ export default class BunSai {
     );
   }
 
-  $reloadRouter() {
+  protected $reloadRouter() {
     this.router.reload();
   }
 
-  async $fetch(request: Request, server: Server) {
+  protected async $fetch(request: Request, server: Server) {
     try {
       const reqResult = await this.middlewares.request.call(
         { request, server },
@@ -133,7 +129,11 @@ export default class BunSai {
   }
 
   get fetch() {
-    return this.$fetch.bind(this);
+    const that = this;
+
+    return function (this: Server, request: Request) {
+      return that.$fetch(request, this);
+    };
   }
 
   get reloadRouter() {
