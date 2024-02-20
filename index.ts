@@ -29,17 +29,20 @@ export default class BunSai {
       "notFound",
       "request",
       "response",
+      "error",
     ]);
 
   constructor(options: BunSaiOptions) {
     this.options = resolveOptions(options);
 
+    const fileExtensions = this.options.staticFiles.concat(
+      Object.keys(this.options.loaders) as Extname[]
+    );
+
     this.router = new Bun.FileSystemRouter({
       ...this.options,
       style: "nextjs",
-      fileExtensions: this.options.staticFiles.concat(
-        Object.keys(this.options.loaders) as Extname[]
-      ),
+      fileExtensions,
     });
 
     Object.assign(
