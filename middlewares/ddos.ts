@@ -13,13 +13,16 @@ export interface DDOSMiddlewareOptions {
    * 1000
    */
   cooldown?: number;
+
+  /**
+   * @default
+   * 'server.requestIP'
+   */
+  strategy?: "x-forwarded-for" | "x-real-ip" | "server.requestIP";
 }
 
 const middlewareName = "@builtin.ddos";
 
-/**
- * @returns A function to remove this middleware from the record
- */
 export default function DDOS(
   middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
   options: DDOSMiddlewareOptions = {}
@@ -27,20 +30,48 @@ export default function DDOS(
   const requestCountTable: Record<string, number> = {};
 
   middlewares.request.add(middlewareName, ({ request, server }) => {
-    const addr = server.requestIP(request);
+    let addr = "";
+
+    switch (options.strategy) {
+      case "x-forwarded-for":
+      case "x-real-ip": {
+        const header = request.headers.get(options.strategy);
+
+        if (header) addr = header;
+
+        if (options.strategy == "x-real-ip") break;
+      }
+
+      case "x-forwarded-for": {
+        if (addr) {
+          addr = addr.split(",").shift()?.trim() || addr;
+        }
+
+        break;
+      }
+
+      case "server.requestIP":
+      default: {
+        const { address } = server.requestIP(request) || {};
+
+        if (address) addr = address;
+
+        break;
+      }
+    }
 
     if (!addr) {
       console.warn(`${middlewareName}: could not get client IP`);
       return;
     }
 
-    requestCountTable[addr.address] ||= 0;
-    const currentCount = (requestCountTable[addr.address] += 1);
+    requestCountTable[addr] ||= 0;
+    const currentCount = (requestCountTable[addr] += 1);
 
     setTimeout(() => {
-      if (requestCountTable[addr.address] > currentCount) return; // the client made more requests, block cooldown
+      if (requestCountTable[addr] > currentCount) return; // the client made more requests, block cooldown
 
-      delete requestCountTable[addr.address];
+      delete requestCountTable[addr];
     }, options.cooldown || 1000);
 
     if (currentCount >= (options.limit || 20))
@@ -50,7 +81,12 @@ export default function DDOS(
       });
   });
 
-  return () => {
-    middlewares.request.remove(middlewareName);
+  return {
+    removeMiddleware() {
+      middlewares.request.remove(middlewareName);
+    },
+    get requestCountTable() {
+      return structuredClone(requestCountTable);
+    },
   };
 }
