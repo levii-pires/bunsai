@@ -1,11 +1,27 @@
-import type { Middleware } from "../types";
+import type {
+  MiddlewareFn,
+  BunSaiMiddlewareRecord,
+  IMiddleware,
+} from "../types";
+import { inject } from ".";
 
 export type MiddlewareRecord<MiddlewareMap extends Record<string, any>> = {
   [K in keyof MiddlewareMap]: MiddlewareChannel<MiddlewareMap[K]>;
 };
 
-export default class MiddlewareChannel<Data> {
-  protected middlewares: Record<string, Middleware<Data>> = {};
+export abstract class Middleware<
+  Runs extends keyof BunSaiMiddlewareRecord = keyof BunSaiMiddlewareRecord
+> implements IMiddleware<Runs>
+{
+  abstract name: string;
+  abstract runsOn: Runs;
+  abstract runner: MiddlewareFn<BunSaiMiddlewareRecord[Runs]>;
+
+  static inject = inject;
+}
+
+export class MiddlewareChannel<Data> {
+  protected middlewares: Record<string, MiddlewareFn<Data>> = {};
 
   /**
    * The maximum amount of middlewares on this channel.
@@ -14,7 +30,7 @@ export default class MiddlewareChannel<Data> {
    */
   limit = 100;
 
-  add(name: string, middleware: Middleware<Data>) {
+  add(name: string, middleware: MiddlewareFn<Data>) {
     if (typeof middleware != "function")
       throw new TypeError("middleware must be a function");
 

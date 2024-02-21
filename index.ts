@@ -13,10 +13,11 @@ import {
   initLoaders,
   MiddlewareChannel,
   LoaderNotFoundError,
+  initMiddlewares,
 } from "./internals";
 
 export default class BunSai {
-  protected options: ResolvedBunSaiOptions;
+  readonly options: ResolvedBunSaiOptions;
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
   protected routeLoaders: LoaderMap = {};
 
@@ -41,15 +42,11 @@ export default class BunSai {
       fileExtensions,
     });
 
-    Object.assign(
-      this.routeLoaders,
-      getStatic(this.options.staticFiles, this.options)
-    );
+    Object.assign(this.routeLoaders, getStatic(this));
 
-    Object.assign(
-      this.routeLoaders,
-      initLoaders(this.options.loaders, this.options)
-    );
+    Object.assign(this.routeLoaders, initLoaders(this));
+
+    initMiddlewares(this);
   }
 
   protected $reloadRouter() {

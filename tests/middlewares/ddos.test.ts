@@ -18,7 +18,7 @@ afterAll(() => {
 
 describe("DDOS Middleware", () => {
   it("should block the request using 'x-forwarded-for' strategy", async () => {
-    const ddos = DDOS(middlewares, {
+    const { remove } = DDOS.inject(middlewares, {
       limit: 1,
       strategy: "x-forwarded-for",
       cooldown: 10,
@@ -43,11 +43,11 @@ describe("DDOS Middleware", () => {
     expect(response1.status).toBe(429);
     expect(response2.status).toBe(200);
 
-    ddos.removeMiddleware();
+    remove();
   });
 
   it("should block the request using 'x-real-ip' strategy", async () => {
-    const ddos = DDOS(middlewares, {
+    const { remove } = DDOS.inject(middlewares, {
       limit: 1,
       strategy: "x-real-ip",
       cooldown: 10,
@@ -72,7 +72,7 @@ describe("DDOS Middleware", () => {
     expect(response1.status).toBe(429);
     expect(response2.status).toBe(200);
 
-    ddos.removeMiddleware();
+    remove();
   });
 
   it("should block the request using 'server.requestIP' strategy", async () => {
@@ -80,7 +80,7 @@ describe("DDOS Middleware", () => {
   });
 
   it("should block cooldown when client made more requests", async () => {
-    const ddos = DDOS(middlewares, {
+    const { instance, remove } = DDOS.inject(middlewares, {
       strategy: "x-forwarded-for",
       cooldown: 50,
     });
@@ -97,12 +97,14 @@ describe("DDOS Middleware", () => {
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    expect(ddos.requestCountTable["1"]).toBe(4);
+    await setTimeout(20);
+
+    expect(instance.requestCountTable["1"]).toBe(4);
 
     await setTimeout(50);
 
-    expect(ddos.requestCountTable["1"]).toBeUndefined();
+    expect(instance.requestCountTable["1"]).toBeUndefined();
 
-    ddos.removeMiddleware();
+    remove();
   });
 });

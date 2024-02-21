@@ -61,6 +61,7 @@ export interface BunSaiOptions {
    * [".html", ".png"]
    */
   staticFiles?: Extname[];
+  middlewares?: IMiddleware[];
 }
 
 export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
@@ -117,9 +118,17 @@ export interface Recommended {
   readonly nunjucksEnv: Environment | undefined;
 }
 
+export interface IMiddleware<
+  Runs extends keyof BunSaiMiddlewareRecord = keyof BunSaiMiddlewareRecord
+> {
+  name: string;
+  runsOn: Runs;
+  runner: MiddlewareFn<BunSaiMiddlewareRecord[Runs]>;
+}
+
 export type MiddlewareResult = Response | void;
 
-export type Middleware<Data> = (
+export type MiddlewareFn<Data> = (
   data: Data
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 

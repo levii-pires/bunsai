@@ -1,5 +1,6 @@
-import type { BunSaiMiddlewareRecord } from "..";
-import type { MiddlewareRecord } from "../internals";
+import { Server } from "bun";
+import { MiddlewareFn } from "../types";
+import { Middleware } from "../internals/middleware";
 
 export interface DDOSMiddlewareOptions {
   /**
@@ -21,37 +22,30 @@ export interface DDOSMiddlewareOptions {
   strategy?: "x-forwarded-for" | "x-real-ip" | "server.requestIP";
 }
 
-export interface DDOS {
-  /**
-   * A read-only structured clone of the internal request count table
-   */
-  readonly requestCountTable: Record<string, number>;
+export default class DDOS extends Middleware<"request"> {
+  name = "@builtin.ddos";
+  runsOn = "request" as const;
 
-  /**
-   * Remove this middleware from BunSai middleware records
-   */
-  removeMiddleware(): void;
-}
+  readonly requestCountTable: Record<string, number> = {};
 
-const middlewareName = "@builtin.ddos";
+  constructor(public readonly options: DDOSMiddlewareOptions = {}) {
+    super();
+  }
 
-export default function DDOS(
-  middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
-  options: DDOSMiddlewareOptions = {}
-): DDOS {
-  const requestCountTable: Record<string, number> = {};
-
-  middlewares.request.add(middlewareName, ({ request, server }) => {
+  runner: MiddlewareFn<{ request: Request; server: Server }> = function (
+    this: DDOS,
+    { request, server }
+  ) {
     let addr = "";
 
-    switch (options.strategy) {
+    switch (this.options.strategy) {
       case "x-forwarded-for":
       case "x-real-ip": {
-        const header = request.headers.get(options.strategy);
+        const header = request.headers.get(this.options.strategy);
 
         if (header) addr = header.trim();
 
-        if (options.strategy == "x-real-ip") break;
+        if (this.options.strategy == "x-real-ip") break;
       }
 
       case "x-forwarded-for": {
@@ -72,32 +66,20 @@ export default function DDOS(
       }
     }
 
-    if (!addr) {
-      console.warn(`${middlewareName}: could not get client IP`);
-      return;
-    }
+    if (!addr) return;
 
-    requestCountTable[addr] ||= 0;
-    const currentCount = (requestCountTable[addr] += 1);
+    this.requestCountTable[addr] ||= 0;
+    const currentCount = (this.requestCountTable[addr] += 1);
 
     setTimeout(() => {
-      if (requestCountTable[addr] > currentCount) return; // the client made more requests, block cooldown
-      delete requestCountTable[addr];
-    }, options.cooldown || 1000);
+      if (this.requestCountTable[addr] > currentCount) return; // the client made more requests, block cooldown
+      delete this.requestCountTable[addr];
+    }, this.options.cooldown || 1000);
 
-    if (currentCount > (options.limit || 20))
+    if (currentCount > (this.options.limit || 20))
       return new Response(null, {
         status: 429,
         statusText: "429 Too Many Requests",
       });
-  });
-
-  return {
-    removeMiddleware() {
-      middlewares.request.remove(middlewareName);
-    },
-    get requestCountTable() {
-      return structuredClone(requestCountTable);
-    },
   };
 }

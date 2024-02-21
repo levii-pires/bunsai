@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import MiddlewareChannel from "../../internals/middleware";
+import { MiddlewareChannel } from "../../internals";
 
 const middleware = new MiddlewareChannel();
 
-describe("Middleware", () => {
+describe("MiddlewareChannel", () => {
   it("should limit the number of middlewares", () => {
     middleware.limit = 1;
 
