@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from "bun:test";
-import BunSai, { MiddlewareFn } from "..";
+import BunSai, { MiddlewareFnWithThis } from "..";
 import getNunjucksLoader from "../loaders/nunjucks";
 import { Server } from "bun";
 import { Middleware } from "../internals";
@@ -14,10 +14,10 @@ class MockMiddleware extends Middleware<"request"> {
 
   test = testStr;
 
-  runner: MiddlewareFn<{ request: Request; server: Server }> = function (
-    this: MockMiddleware,
-    { request }
-  ) {
+  $runner: MiddlewareFnWithThis<
+    { request: Request; server: Server },
+    MockMiddleware
+  > = function ({ request }) {
     if (request.headers.get("x-mock"))
       return new Response(this.test, { status: 418 });
   };

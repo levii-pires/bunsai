@@ -101,7 +101,7 @@ describe("DDOS Middleware", () => {
 
     expect(instance.requestCountTable["1"]).toBe(4);
 
-    await setTimeout(50);
+    await setTimeout(30);
 
     expect(instance.requestCountTable["1"]).toBeUndefined();
 

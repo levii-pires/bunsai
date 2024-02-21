@@ -6,7 +6,7 @@ import type {
   BunSaiOptions,
   LoaderMap,
 } from "../types";
-import { Middleware } from "./middleware";
+import type { Middleware } from "./middleware";
 
 export function getStatic(bunsai: BunSai) {
   const { options } = bunsai;
@@ -34,7 +34,7 @@ export function initMiddlewares(bunsai: BunSai) {
   for (const middleware of bunsai.options.middlewares) {
     bunsai.middlewares[middleware.runsOn].add(
       middleware.name,
-      middleware.runner.bind(middleware)
+      middleware.runner
     );
   }
 }
@@ -51,17 +51,19 @@ export function initLoaders(bunsai: BunSai) {
   return result;
 }
 
+/**
+ * Inject the {@link Host} into the BunSai MiddlewareRecord
+ *
+ * @param this The Host. Must extend {@link Middleware}
+ */
 export function inject<Host extends new (...args: any[]) => Middleware>(
   this: Host,
   middlewares: BunSai["middlewares"],
-  options?: ConstructorParameters<Host>[0]
+  ...args: ConstructorParameters<Host>
 ) {
-  const instance = new this(options);
+  const instance = new this(...args);
 
-  middlewares[instance.runsOn].add(
-    instance.name,
-    instance.runner.bind(instance)
-  );
+  middlewares[instance.runsOn].add(instance.name, instance.runner);
 
   return {
     instance: instance as InstanceType<Host>,

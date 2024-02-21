@@ -132,6 +132,11 @@ export type MiddlewareFn<Data> = (
   data: Data
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 
+export type MiddlewareFnWithThis<Data, This = any> = (
+  this: This,
+  data: Data
+) => MiddlewareResult | Promise<MiddlewareResult>;
+
 export interface BunSaiMiddlewareRecord {
   response: {
     response: Response;

@@ -1,5 +1,5 @@
 import { Server } from "bun";
-import { MiddlewareFn } from "../types";
+import { MiddlewareFnWithThis } from "../types";
 import { Middleware } from "../internals/middleware";
 
 export interface DDOSMiddlewareOptions {
@@ -32,10 +32,10 @@ export default class DDOS extends Middleware<"request"> {
     super();
   }
 
-  runner: MiddlewareFn<{ request: Request; server: Server }> = function (
-    this: DDOS,
-    { request, server }
-  ) {
+  protected $runner: MiddlewareFnWithThis<
+    { request: Request; server: Server },
+    DDOS
+  > = function ({ request, server }) {
     let addr = "";
 
     switch (this.options.strategy) {

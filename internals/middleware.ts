@@ -2,6 +2,7 @@ import type {
   MiddlewareFn,
   BunSaiMiddlewareRecord,
   IMiddleware,
+  MiddlewareFnWithThis,
 } from "../types";
 import { inject } from ".";
 
@@ -15,7 +16,18 @@ export abstract class Middleware<
 {
   abstract name: string;
   abstract runsOn: Runs;
-  abstract runner: MiddlewareFn<BunSaiMiddlewareRecord[Runs]>;
+
+  get runner() {
+    return this.$runner.bind(this);
+  }
+
+  /**
+   * This is the internal implementation of the `runner`.
+   * Here comes the actual middleware logic
+   */
+  protected abstract $runner: MiddlewareFnWithThis<
+    BunSaiMiddlewareRecord[Runs]
+  >;
 
   static inject = inject;
 }
