@@ -70,11 +70,10 @@ export default function DDOS(
 
     setTimeout(() => {
       if (requestCountTable[addr] > currentCount) return; // the client made more requests, block cooldown
-
       delete requestCountTable[addr];
     }, options.cooldown || 1000);
 
-    if (currentCount >= (options.limit || 20))
+    if (currentCount > (options.limit || 20))
       return new Response(null, {
         status: 429,
         statusText: "429 Too Many Requests",

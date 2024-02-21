@@ -3,13 +3,13 @@ import BunSai from "../..";
 import { describe, expect, it, afterAll } from "bun:test";
 import { setTimeout } from "timers/promises";
 
-const { middlewares, fetch: $ } = new BunSai({
+const { middlewares, fetch } = new BunSai({
   loaders: {},
   staticFiles: [".html"],
   dir: "./tests/pages",
 });
 
-const server = Bun.serve({ fetch: $, hostname: "127.0.0.1", port: 3000 });
+const server = Bun.serve({ fetch });
 
 afterAll(() => {
   server.unref();
@@ -21,6 +21,7 @@ describe("DDOS Middleware", () => {
     const ddos = DDOS(middlewares, {
       limit: 1,
       strategy: "x-forwarded-for",
+      cooldown: 10,
     });
 
     const init = {
@@ -29,12 +30,19 @@ describe("DDOS Middleware", () => {
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
-    const response = await server.fetch(
+    const response1 = await server.fetch(
       new Request("https://127.0.0.1:3000/html", init)
     );
 
-    ddos.removeMiddleware();
+    await setTimeout(50);
 
-    expect(response.status).toBe(429);
+    const response2 = await server.fetch(
+      new Request("https://127.0.0.1:3000/html", init)
+    );
+
+    expect(response1.status).toBe(429);
+    expect(response2.status).toBe(200);
+
+    ddos.removeMiddleware();
   });
 });
