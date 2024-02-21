@@ -21,13 +21,9 @@ export default class BunSai {
   protected router: InstanceType<typeof Bun.FileSystemRouter>;
   protected routeLoaders: LoaderMap = {};
 
-  readonly middlewares =
-    MiddlewareChannel.createMiddlewareRecord<BunSaiMiddlewareRecord>([
-      "notFound",
-      "request",
-      "response",
-      "error",
-    ]);
+  readonly middlewares = MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>(
+    ["notFound", "request", "response", "error"]
+  );
 
   constructor(options: BunSaiOptions) {
     this.options = resolveOptions(options);

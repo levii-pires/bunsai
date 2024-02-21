@@ -70,7 +70,7 @@ export class MiddlewareChannel<Data> {
     return Object.keys(this.middlewares);
   }
 
-  static createMiddlewareRecord<MiddlewareMap extends Record<string, any>>(
+  static createRecord<MiddlewareMap extends Record<string, any>>(
     channels: Array<keyof MiddlewareMap>
   ): MiddlewareRecord<MiddlewareMap> {
     return Object.fromEntries(
