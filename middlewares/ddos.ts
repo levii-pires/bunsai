@@ -21,12 +21,24 @@ export interface DDOSMiddlewareOptions {
   strategy?: "x-forwarded-for" | "x-real-ip" | "server.requestIP";
 }
 
+export interface DDOS {
+  /**
+   * A read-only structured clone of the internal request count table
+   */
+  readonly requestCountTable: Record<string, number>;
+
+  /**
+   * Remove this middleware from BunSai middleware records
+   */
+  removeMiddleware(): void;
+}
+
 const middlewareName = "@builtin.ddos";
 
 export default function DDOS(
   middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
   options: DDOSMiddlewareOptions = {}
-) {
+): DDOS {
   const requestCountTable: Record<string, number> = {};
 
   middlewares.request.add(middlewareName, ({ request, server }) => {
@@ -37,7 +49,7 @@ export default function DDOS(
       case "x-real-ip": {
         const header = request.headers.get(options.strategy);
 
-        if (header) addr = header;
+        if (header) addr = header.trim();
 
         if (options.strategy == "x-real-ip") break;
       }
