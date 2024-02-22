@@ -34,7 +34,7 @@ describe("DDOS Middleware", () => {
       new Request("https://127.0.0.1:3000/html", init)
     );
 
-    await setTimeout(50);
+    await setTimeout(10);
 
     const response2 = await server.fetch(
       new Request("https://127.0.0.1:3000/html", init)
@@ -63,7 +63,7 @@ describe("DDOS Middleware", () => {
       new Request("https://127.0.0.1:3000/html", init)
     );
 
-    await setTimeout(50);
+    await setTimeout(10);
 
     const response2 = await server.fetch(
       new Request("https://127.0.0.1:3000/html", init)
@@ -82,7 +82,7 @@ describe("DDOS Middleware", () => {
   it("should block cooldown when client made more requests", async () => {
     const { instance, remove } = DDOS.inject(middlewares, {
       strategy: "x-forwarded-for",
-      cooldown: 50,
+      cooldown: 20,
     });
 
     const init = {
@@ -93,15 +93,15 @@ describe("DDOS Middleware", () => {
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    await setTimeout(40);
+    await setTimeout(10);
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    await setTimeout(20);
+    await setTimeout(15);
 
     expect(instance.requestCountTable["1"]).toBe(4);
 
-    await setTimeout(30);
+    await setTimeout(10);
 
     expect(instance.requestCountTable["1"]).toBeUndefined();
 
