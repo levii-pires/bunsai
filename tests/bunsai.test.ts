@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from "bun:test";
-import BunSai, { MiddlewareFnWithThis } from "..";
+import BunSai, { MiddlewareRunnerWithThis } from "..";
 import getNunjucksLoader from "../loaders/nunjucks";
 import { Server } from "bun";
 import { Middleware } from "../internals";
@@ -14,11 +14,11 @@ class MockMiddleware extends Middleware<"request"> {
 
   test = testStr;
 
-  $runner: MiddlewareFnWithThis<
+  $runner: MiddlewareRunnerWithThis<
     { request: Request; server: Server },
     MockMiddleware
   > = function ({ request }) {
-    if (request.headers.get("x-mock"))
+    if (request.headers.has("x-mock"))
       return new Response(this.test, { status: 418 });
   };
 }
@@ -58,7 +58,7 @@ describe("BunSai", () => {
     expect(await response.text()).toInclude("http://test.bun/nunjucks");
   });
 
-  it("should use binded middlewares", async () => {
+  it("should use middlewares", async () => {
     const response = await server.fetch(
       new Request("http://test.bun/nunjucks", { headers: { "x-mock": "1" } })
     );
