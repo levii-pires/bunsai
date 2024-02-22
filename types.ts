@@ -1,6 +1,7 @@
 import type { MatchedRoute, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
+import type { DDOSMiddlewareOptions } from "./middlewares/ddos";
 
 export type Loader = (
   filePath: string,
@@ -54,7 +55,7 @@ export interface BunSaiOptions {
     ".vue": vueLoaderInit,
     }
    */
-  loaders: LoaderInitMap;
+  loaders?: LoaderInitMap;
   /**
    * Specify files to be served statically by file extension
    * @example
@@ -71,6 +72,9 @@ export interface RecommendedOpts {
     options?: ConfigureOptions;
   };
   sass?: { options?: Options<"sync"> };
+  middlewares?: {
+    ddos?: DDOSMiddlewareOptions;
+  };
 }
 
 /**
@@ -112,10 +116,25 @@ export interface Recommended {
       ".woff2",
      */
   staticFiles: Extname[];
+
+  middlewares: IMiddleware[];
+
   /**
-   * Undefined before loader initiation
+   * Undefined before loader initiation.
+   *
+   * This property is deprecated and will be removed on v1.
+   * Use {@link nunjucks} instead.
+   *
+   * @deprecated
    */
   readonly nunjucksEnv: Environment | undefined;
+
+  nunjucks: {
+    /**
+     * Undefined before loader initiation.
+     */
+    env(): Environment | undefined;
+  };
 }
 
 export interface IMiddleware<
@@ -123,16 +142,16 @@ export interface IMiddleware<
 > {
   name: string;
   runsOn: Runs;
-  runner: MiddlewareFn<BunSaiMiddlewareRecord[Runs]>;
+  runner: MiddlewareRunner<BunSaiMiddlewareRecord[Runs]>;
 }
 
 export type MiddlewareResult = Response | void;
 
-export type MiddlewareFn<Data> = (
+export type MiddlewareRunner<Data> = (
   data: Data
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 
-export type MiddlewareFnWithThis<Data, This = any> = (
+export type MiddlewareRunnerWithThis<Data, This = any> = (
   this: This,
   data: Data
 ) => MiddlewareResult | Promise<MiddlewareResult>;
