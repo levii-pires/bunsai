@@ -134,7 +134,7 @@ new BunSai({
 Sass is the most mature, stable, and powerful professional grade CSS extension language in the world.
 
 ```sh
-bun add sass @types/sass
+bun add sass
 ```
 
 ```js
