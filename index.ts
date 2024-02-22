@@ -7,26 +7,22 @@ import type {
   BunSaiMiddlewareRecord,
 } from "./types";
 import { extname } from "path";
-import {
-  resolveOptions,
-  getStatic,
-  initLoaders,
-  MiddlewareChannel,
-  LoaderNotFoundError,
-  initMiddlewares,
-} from "./internals";
+import * as Internals from "./internals";
 
 export default class BunSai {
+  readonly router: InstanceType<typeof Bun.FileSystemRouter>;
+  readonly routeLoaders: LoaderMap = {};
   readonly options: ResolvedBunSaiOptions;
-  protected router: InstanceType<typeof Bun.FileSystemRouter>;
-  protected routeLoaders: LoaderMap = {};
-
-  readonly middlewares = MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>(
-    ["notFound", "request", "response", "error"]
-  );
+  readonly middlewares =
+    Internals.MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>([
+      "notFound",
+      "request",
+      "response",
+      "error",
+    ]);
 
   constructor(options: BunSaiOptions) {
-    this.options = resolveOptions(options);
+    this.options = Internals.resolveOptions(options);
 
     const fileExtensions = this.options.staticFiles.concat(
       Object.keys(this.options.loaders) as Extname[]
@@ -38,11 +34,9 @@ export default class BunSai {
       fileExtensions,
     });
 
-    Object.assign(this.routeLoaders, getStatic(this));
-
-    Object.assign(this.routeLoaders, initLoaders(this));
-
-    initMiddlewares(this);
+    Internals.getStatic(this);
+    Internals.initLoaders(this);
+    Internals.initMiddlewares(this);
   }
 
   protected $reloadRouter() {
@@ -75,7 +69,7 @@ export default class BunSai {
       const loader =
         this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
 
-      if (!loader) throw new LoaderNotFoundError(request);
+      if (!loader) throw new Internals.LoaderNotFoundError(request);
 
       const response = await loader(route.filePath, { server, request, route });
 
@@ -91,11 +85,14 @@ export default class BunSai {
 
       return resResult || response;
     } catch (error) {
-      const errResult = await this.middlewares.error.call({
-        error,
-        request,
-        server,
-      });
+      const errResult = await this.middlewares.error.call(
+        {
+          error,
+          request,
+          server,
+        },
+        this.options.dev
+      );
 
       if (errResult) return errResult;
 
