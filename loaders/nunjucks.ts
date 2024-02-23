@@ -26,6 +26,9 @@ export default function getNunjucksLoader(
       const rootPath = resolve(opts.dir);
 
       return (filePath, data) => {
+        if (data.request.method != "GET")
+          return new Response(null, { status: 405 });
+
         const { promise, reject, resolve } = Promise.withResolvers<Response>();
 
         env!

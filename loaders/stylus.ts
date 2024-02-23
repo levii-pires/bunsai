@@ -5,7 +5,9 @@ export default function getStylusLoader(
   options: Omit<stylus.RenderOptions, "filename"> = {}
 ): LoaderInitiator {
   return ({ dev }) =>
-    async (filePath) => {
+    async (filePath, { request }) => {
+      if (request.method != "GET") return new Response(null, { status: 405 });
+
       const { promise, reject, resolve } = Promise.withResolvers<Response>();
 
       stylus(await Bun.file(filePath).text(), options)
