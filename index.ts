@@ -103,7 +103,8 @@ export default class BunSai {
   }
 
   /**
-   * @deprecated Since v0.2.0
+   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
+   * @deprecated
    */
   addMiddleware(): never {
     throw new Error(
@@ -112,7 +113,8 @@ export default class BunSai {
   }
 
   /**
-   * @deprecated Since v0.2.0
+   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
+   * @deprecated
    */
   removeMiddleware(): never {
     throw new Error(
