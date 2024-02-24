@@ -3,9 +3,12 @@ import { ModuleLoaderInit } from "./loaders";
 import getNunjucksLoader from "./loaders/nunjucks";
 import getSassLoader from "./loaders/sass";
 import DDOS from "./middlewares/ddos";
+import getCORS from "./middlewares/cors";
 
 export default function getRecommended(opts?: RecommendedOpts): Recommended {
   const nunjucks = getNunjucksLoader(opts?.nunjucks?.options);
+
+  const { preflight, response } = getCORS(opts?.middlewares?.cors);
 
   return {
     get nunjucksEnv() {
@@ -33,6 +36,6 @@ export default function getRecommended(opts?: RecommendedOpts): Recommended {
       ".woff2",
     ] as Extname[],
 
-    middlewares: [new DDOS(opts?.middlewares?.ddos)],
+    middlewares: [new DDOS(opts?.middlewares?.ddos), preflight, response],
   };
 }
