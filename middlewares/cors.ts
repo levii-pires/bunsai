@@ -35,10 +35,46 @@ export interface CORSOptions {
   optionsSuccessStatus?: number;
 }
 
-function parseStringOrArray(input: string | string[]) {
+function parseList(input: string | string[]) {
   if (Array.isArray(input)) return input.join(",");
 
   return input;
+}
+
+function applyHeaders(
+  options: CORSOptions,
+  allowOrigin: string,
+  response: Response,
+  request: Request
+) {
+  response.headers.set("Access-Control-Allow-Origin", allowOrigin);
+
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    parseList(options.methods || "GET,HEAD,PUT,PATCH,POST,DELETE")
+  );
+
+  const allowHeaders =
+    options.allowedHeaders ||
+    request.headers.get("Access-Control-Request-Headers");
+
+  if (allowHeaders)
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      parseList(allowHeaders)
+    );
+
+  if (options.exposedHeaders)
+    response.headers.set(
+      "Access-Control-Expose-Headers",
+      parseList(options.exposedHeaders)
+    );
+
+  if (options.credentials)
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+
+  if (options.maxAge)
+    response.headers.set("Access-Control-Max-Age", String(options.maxAge));
 }
 
 function resolveOrigin(
@@ -65,11 +101,7 @@ function resolveOrigin(
         else return false;
       }
 
-      if (
-        options.origin instanceof RegExp &&
-        options.origin.test(requestOrigin)
-      )
-        return requestOrigin;
+      if (options.origin.test(requestOrigin)) return requestOrigin;
       else return false;
     }
     case "function": {
@@ -97,7 +129,7 @@ export class CORSPreflight extends Middleware<"request"> {
       request: Request;
       server: Server;
     },
-    CORSPreflight
+    this
   > = function ({ request }) {
     const requestOrigin = request.headers.get("Origin");
 
@@ -110,39 +142,17 @@ export class CORSPreflight extends Middleware<"request"> {
 
     const allowOrigin = resolveOrigin(this.options, requestOrigin, request);
 
-    if (!allowOrigin) return new Response(null, { status: 403 });
+    if (!allowOrigin)
+      return new Response(null, {
+        status: 403,
+        statusText: "Blocked by CORS policy",
+      });
 
     const response = new Response(null, {
       status: this.options.optionsSuccessStatus || 204,
     });
 
-    request.headers.set("Access-Control-Allow-Origin", allowOrigin);
-
-    request.headers.set(
-      "Access-Control-Allow-Methods",
-      parseStringOrArray(
-        this.options.methods || "GET,HEAD,PUT,PATCH,POST,DELETE"
-      )
-    );
-
-    const allowHeaders =
-      this.options.allowedHeaders ||
-      request.headers.get("Access-Control-Request-Headers");
-
-    if (allowHeaders)
-      request.headers.set(
-        "Access-Control-Allow-Headers",
-        parseStringOrArray(allowHeaders)
-      );
-
-    if (this.options.credentials)
-      request.headers.set("Access-Control-Allow-Credentials", "true");
-
-    if (this.options.maxAge)
-      request.headers.set(
-        "Access-Control-Max-Age",
-        String(this.options.maxAge)
-      );
+    applyHeaders(this.options, allowOrigin, response, request);
 
     return response;
   };
@@ -156,20 +166,34 @@ export class CORSResponse extends Middleware<"response"> {
     super();
   }
 
-  protected $runner: MiddlewareRunnerWithThis<{
-    response: Response;
-    request: Request;
-    server: Server;
-    route: MatchedRoute;
-  }> = function ({ response, request }) {
+  protected $runner: MiddlewareRunnerWithThis<
+    {
+      response: Response;
+      request: Request;
+      server: Server;
+      route: MatchedRoute;
+    },
+    this
+  > = function ({ response, request }) {
     const requestOrigin = request.headers.get("Origin");
 
     if (!requestOrigin || this.options.origin === false) return;
 
-    // todo: finish implementation
+    const allowOrigin = resolveOrigin(this.options, requestOrigin, request);
+
+    if (!allowOrigin)
+      return new Response(null, {
+        status: 403,
+        statusText: "Blocked by CORS policy",
+      });
+
+    applyHeaders(this.options, allowOrigin, response, request);
   };
 }
 
 export default function getCORS(options: CORSOptions = {}) {
-  return [new CORSPreflight(options), new CORSResponse(options)] as const;
+  return {
+    preflight: new CORSPreflight(options),
+    response: new CORSResponse(options),
+  };
 }
