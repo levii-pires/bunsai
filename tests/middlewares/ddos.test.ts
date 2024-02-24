@@ -1,19 +1,16 @@
 import DDOS from "../../middlewares/ddos";
-import BunSai from "../..";
-import { describe, expect, it, afterAll } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { setTimeout } from "timers/promises";
+import { getInstance } from "../testing";
 
-const { middlewares, fetch } = new BunSai({
+const {
+  bunsai: { middlewares },
+  server,
+} = getInstance({
   loaders: {},
   staticFiles: [".html"],
   dir: "./tests/pages",
-});
-
-const server = Bun.serve({ fetch });
-
-afterAll(() => {
-  server.unref();
-  server.stop();
+  dev: false,
 });
 
 describe("DDOS Middleware", () => {
@@ -97,7 +94,7 @@ describe("DDOS Middleware", () => {
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    await setTimeout(15);
+    await setTimeout(10);
 
     expect(instance.requestCountTable["1"]).toBe(4);
 

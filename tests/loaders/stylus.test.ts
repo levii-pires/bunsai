@@ -1,24 +1,15 @@
-import { describe, it, expect, afterAll } from "bun:test";
-import BunSai from "../..";
 import getStylusLoader from "../../loaders/stylus";
-
-const { fetch } = new BunSai({
-  loaders: { ".styl": getStylusLoader() },
-  dir: "./tests/pages",
-});
-
-const server = Bun.serve({ fetch });
-
-afterAll(() => {
-  server.unref();
-  server.stop();
-});
+import { loaderTest } from "../testing";
+import { describe } from "bun:test";
 
 describe("Stylus Loader", () => {
-  it("should load stylus files", async () => {
-    const response = await server.fetch(new Request("https://bun.test/stylus"));
-
-    expect(response.headers.get("content-type")).toStartWith("text/css");
-    expect(await response.text()).toInclude("margin:44px");
+  loaderTest({
+    bunsaiOpts: {
+      loaders: { ".styl": getStylusLoader() },
+      dir: "./tests/pages",
+    },
+    contentType: "text/css",
+    testKey: "stylus",
+    responseIncludes: "margin: 44px",
   });
 });

@@ -1,8 +1,9 @@
-import { describe, it, expect, afterAll } from "bun:test";
-import BunSai, { MiddlewareRunnerWithThis } from "..";
+import { describe, it, expect } from "bun:test";
+import { MiddlewareRunnerWithThis } from "..";
 import getNunjucksLoader from "../loaders/nunjucks";
 import { Server } from "bun";
 import { Middleware } from "../internals";
+import { getInstance } from "./testing";
 
 const njkLoader = getNunjucksLoader();
 
@@ -23,18 +24,12 @@ class MockMiddleware extends Middleware<"request"> {
   };
 }
 
-const { fetch } = new BunSai({
+const { server } = getInstance({
   loaders: { ".njk": njkLoader.loaderInit },
   staticFiles: [".html"],
+  dev: false,
   dir: "./tests/pages",
   middlewares: [new MockMiddleware()],
-});
-
-const server = Bun.serve({ fetch });
-
-afterAll(() => {
-  server.unref();
-  server.stop();
 });
 
 describe("BunSai", () => {
