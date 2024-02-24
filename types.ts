@@ -1,28 +1,42 @@
-import type { MatchedRoute, Server } from "bun";
+import type { BunFile, MatchedRoute, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
 import type { DDOSMiddlewareOptions } from "./middlewares/ddos";
+import type { CORSOptions } from "./middlewares/cors";
 
 export type Loader = (
   filePath: string,
-  data: ModuleData
+  data: RequestData
 ) => Response | Promise<Response>;
 
 export type LoaderInitiator = (
   bunsaiOpts: ResolvedBunSaiOptions
 ) => Loader | Promise<Loader>;
 
-export type ModuleContent = BodyInit | Response;
+export type ModuleContent =
+  | BunFile
+  | Blob
+  | string
+  | ArrayBuffer
+  | Buffer
+  | Response;
 
-export interface ModuleData {
+export interface RequestData {
   request: Request;
   route: MatchedRoute;
   server: Server;
 }
 
 export type ModuleHandler = (
-  data: ModuleData
+  data: RequestData
 ) => ModuleContent | Promise<ModuleContent>;
+
+/**
+ * @returns
+ * - `boolean`: if the ModuleLoader should (or should not) perform an cache invalidate;
+ * - `number`: if the ModuleLoader should wait (in ms) before invalidate
+ */
+export type CacheInvalidateHandler = (data: RequestData) => boolean | number;
 
 /**
  * Implemented by the [`ModuleLoader`](./loaders/module.ts)
@@ -30,6 +44,12 @@ export type ModuleHandler = (
 export interface Module {
   handler: ModuleHandler;
   headers?: Record<string, string>;
+  /**
+   * If this method is not implemented, the ModuleLoader will always run the {@link handler}.
+   *
+   * **NOTE:** caching is ignored if {@link ResolvedBunSaiOptions.dev} is true.
+   */
+  invalidate?: CacheInvalidateHandler;
 }
 
 export type Extname = `.${Lowercase<string>}`;
@@ -44,10 +64,23 @@ export interface BunSaiOptions {
    * @default "./pages"
    */
   dir?: string;
+  /**
+   * @default ""
+   */
   assetPrefix?: string;
+  /**
+   * @default ""
+   */
   origin?: string;
+  /**
+   * @default
+   * process.env.NODE_ENV !== 'production'
+   */
   dev?: boolean;
   /**
+   * @default {}
+   * 
+   * 
    * @example
    * loaders: {
     ".njk": nunjucksLoaderInit,
@@ -59,12 +92,17 @@ export interface BunSaiOptions {
    */
   loaders?: LoaderInitMap;
   /**
+   * @default []
+   *
    * Specify files to be served statically by file extension
    * @example
    * [".html", ".png"]
    */
   staticFiles?: Extname[];
-  middlewares?: IMiddleware[];
+  /**
+   * @default []
+   */
+  middlewares?: AllMiddlewares[];
 }
 
 export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
@@ -76,6 +114,7 @@ export interface RecommendedOpts {
   sass?: { options?: Options<"sync"> };
   middlewares?: {
     ddos?: DDOSMiddlewareOptions;
+    cors?: CORSOptions;
   };
 }
 
@@ -119,7 +158,7 @@ export interface Recommended {
      */
   staticFiles: Extname[];
 
-  middlewares: IMiddleware[];
+  middlewares: AllMiddlewares[];
 
   /**
    * Undefined before loader initiation.
@@ -146,6 +185,9 @@ export interface IMiddleware<
   runsOn: Runs;
   runner: MiddlewareRunner<BunSaiMiddlewareRecord[Runs]>;
 }
+
+export type AllMiddlewares<K = keyof BunSaiMiddlewareRecord> =
+  K extends keyof BunSaiMiddlewareRecord ? IMiddleware<K> : never;
 
 export type MiddlewareResult = Response | void;
 
