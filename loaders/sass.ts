@@ -2,27 +2,30 @@ import { FSCache } from "../internals";
 import type { LoaderInitiator } from "../types";
 import { compile, Options } from "sass";
 
+const responseInit = {
+  headers: { "Content-Type": "text/css; charset=utf-8" },
+};
+
 export default function getSassLoader(
   options?: Options<"sync">
 ): LoaderInitiator {
-  return () => {
-    // const cache = new FSCache("loader", "sass");
+  return async ({ dev }) => {
+    const cache = new FSCache("loader", "sass", dev);
 
-    // await cache.mkdir();
+    await cache.setup();
 
     return async (filePath, { request }) => {
-      // if (request.method != "GET") return new Response(null, { status: 405 });
+      if (request.method != "GET") return new Response(null, { status: 405 });
 
-      // const inCache = cache.file(filePath);
+      const inCache = cache.file(filePath);
 
-      // if (await inCache.exists())
-      //   return new Response(inCache, {
-      //     headers: { "Content-Type": "text/css; charset=utf-8" },
-      //   });
+      if (await inCache.exists()) return new Response(inCache, responseInit);
 
-      return new Response(compile(filePath, options).css, {
-        headers: { "Content-Type": "text/css; charset=utf-8" },
-      });
+      const result = compile(filePath, options).css;
+
+      await cache.write(filePath, result);
+
+      return new Response(result, responseInit);
     };
   };
 }

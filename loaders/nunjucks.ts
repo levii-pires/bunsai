@@ -10,6 +10,7 @@ export interface NunjucksLoader {
   loaderInit: LoaderInitiator;
 }
 
+// Nunjucks has already a cache system. Not implementing FSCache here.
 export default function getNunjucksLoader(
   options?: ConfigureOptions
 ): NunjucksLoader {
