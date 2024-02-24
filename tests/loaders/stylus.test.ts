@@ -19,6 +19,6 @@ describe("Stylus Loader", () => {
     const response = await server.fetch(new Request("https://bun.test/stylus"));
 
     expect(response.headers.get("content-type")).toStartWith("text/css");
-    expect(await response.text()).toInclude("margin: 44px;");
+    expect(await response.text()).toInclude("margin:44px");
   });
 });

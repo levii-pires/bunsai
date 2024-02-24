@@ -71,7 +71,9 @@ export default class BunSai {
 
       if (!loader) throw new Internals.LoaderNotFoundError(request);
 
-      const response = await loader(route.filePath, { server, request, route });
+      const response = await (
+        await loader
+      )(route.filePath, { server, request, route });
 
       const resResult = await this.middlewares.response.call(
         {

@@ -8,7 +8,9 @@ export type Loader = (
   data: ModuleData
 ) => Response | Promise<Response>;
 
-export type LoaderInitiator = (bunsaiOpts: ResolvedBunSaiOptions) => Loader;
+export type LoaderInitiator = (
+  bunsaiOpts: ResolvedBunSaiOptions
+) => Loader | Promise<Loader>;
 
 export type ModuleContent = BodyInit | Response;
 
@@ -32,7 +34,7 @@ export interface Module {
 
 export type Extname = `.${Lowercase<string>}`;
 
-export type LoaderMap = Record<Extname, Loader>;
+export type LoaderMap = Record<Extname, Loader | Promise<Loader>>;
 
 export type LoaderInitMap = Record<Extname, LoaderInitiator>;
 
