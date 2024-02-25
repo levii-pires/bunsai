@@ -1,7 +1,7 @@
 import type { BunFile, MatchedRoute, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
-import type { DDOSMiddlewareOptions } from "./middlewares/ddos";
+import type { DDOSOptions } from "./middlewares/ddos";
 import type { CORSOptions } from "./middlewares/cors";
 
 export type Loader = (
@@ -31,12 +31,7 @@ export type ModuleHandler = (
   data: RequestData
 ) => ModuleContent | Promise<ModuleContent>;
 
-/**
- * @returns
- * - `boolean`: if the ModuleLoader should (or should not) perform an cache invalidate;
- * - `number`: if the ModuleLoader should wait (in ms) before invalidate
- */
-export type CacheInvalidateHandler = (data: RequestData) => boolean | number;
+export type CacheInvalidateHandler = (data: RequestData) => boolean;
 
 /**
  * Implemented by the [`ModuleLoader`](./loaders/module.ts)
@@ -113,7 +108,7 @@ export interface RecommendedOpts {
   };
   sass?: { options?: Options<"sync"> };
   middlewares?: {
-    ddos?: DDOSMiddlewareOptions;
+    ddos?: DDOSOptions;
     cors?: CORSOptions;
   };
 }
