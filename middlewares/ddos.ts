@@ -2,7 +2,7 @@ import { Server } from "bun";
 import { MiddlewareRunnerWithThis } from "../types";
 import { Middleware } from "../internals/middleware";
 
-export interface DDOSMiddlewareOptions {
+export interface DDOSOptions {
   /**
    * @default 20
    */
@@ -28,7 +28,7 @@ export default class DDOS extends Middleware<"request"> {
 
   readonly requestCountTable: Record<string, number> = {};
 
-  constructor(public readonly options: DDOSMiddlewareOptions = {}) {
+  constructor(public readonly options: DDOSOptions = {}) {
     super();
   }
 
