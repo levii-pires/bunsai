@@ -1,12 +1,5 @@
 import { FSCache } from "../internals";
-import type {
-  Module,
-  LoaderInitiator,
-  CacheInvalidateHandler,
-  RequestData,
-} from "../types";
-
-const invalidationDict: Record<string, boolean> = {};
+import type { Module, LoaderInitiator } from "../types";
 
 function responseInit(
   headers: Record<string, string> | undefined
@@ -14,27 +7,6 @@ function responseInit(
   return {
     headers: { "Content-Type": "text/html; charset=utf-8", ...headers },
   };
-}
-
-async function invalidation(
-  filePath: string,
-  data: RequestData,
-  headers: Record<string, string> | undefined,
-  invalidate: CacheInvalidateHandler,
-  cache: FSCache
-) {
-  const invalid = invalidate(data);
-
-  if (invalid === true) {
-    await cache.invalidate(filePath, { force: true });
-    return;
-  } else if (typeof invalid == "number") {
-    setTimeout(() => cache.invalidate(filePath, { force: true }), invalid);
-  }
-
-  const inCache = cache.file(filePath);
-  if (await inCache.exists())
-    return new Response(inCache, responseInit(headers));
 }
 
 const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
@@ -50,18 +22,17 @@ const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
         `${filePath}: Should have an export named "handler" of type "function"`
       );
 
-    const shouldCache = typeof invalidate == "function" && !dev;
+    const shouldCache = typeof invalidate == "function";
 
     if (shouldCache) {
-      const invResult = await invalidation(
-        filePath,
-        data,
-        headers,
-        invalidate,
-        cache
-      );
+      if (invalidate(data)) {
+        await cache.invalidate(filePath, { force: true });
+      } else {
+        const inCache = cache.file(filePath);
 
-      if (invResult) return invResult;
+        if (await inCache.exists())
+          return new Response(inCache, responseInit(headers));
+      }
     }
 
     const result = await handler(data);
