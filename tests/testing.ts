@@ -7,6 +7,7 @@ interface TestOptions {
   contentType: string;
   responseIncludes: string;
   bunsaiOpts: BunSaiOptions;
+  ignoreGET?: boolean;
 }
 
 const portList: number[] = [];
@@ -16,6 +17,7 @@ export function loaderTest({
   contentType,
   bunsaiOpts,
   responseIncludes,
+  ignoreGET,
 }: TestOptions) {
   const { server } = getInstance(bunsaiOpts);
 
@@ -43,6 +45,8 @@ export function loaderTest({
 
     expect(await response.text()).toInclude(responseIncludes);
   });
+
+  if (ignoreGET) return;
 
   it("should block non 'GET' methods", async () => {
     const response1 = await server.fetch(
