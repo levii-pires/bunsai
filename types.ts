@@ -27,8 +27,10 @@ export interface RequestData {
   server: Server;
 }
 
+export interface ModuleData extends RequestData {}
+
 export type ModuleHandler = (
-  data: RequestData
+  data: ModuleData
 ) => ModuleContent | Promise<ModuleContent>;
 
 export type CacheInvalidateHandler = (data: RequestData) => boolean;

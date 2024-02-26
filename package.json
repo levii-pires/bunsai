@@ -33,7 +33,8 @@
     "types.ts",
     "recommended.ts",
     "internals",
-    "middlewares"
+    "middlewares",
+    "util"
   ],
   "license": "MIT",
   "private": false,

@@ -33,6 +33,8 @@ export interface CORSOptions {
    * @default 204
    */
   optionsSuccessStatus?: number;
+
+  preflightContinue?: boolean;
 }
 
 function parseList(input: string | string[]) {
@@ -147,6 +149,8 @@ export class CORSPreflight extends Middleware<"request"> {
         status: 403,
         statusText: "Blocked by CORS policy",
       });
+
+    if (this.options.preflightContinue) return;
 
     const response = new Response(null, {
       status: this.options.optionsSuccessStatus || 204,

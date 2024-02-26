@@ -55,7 +55,7 @@ export class MiddlewareChannel<Data> {
   }
 
   static createRecord<MiddlewareMap extends Record<string, any>>(
-    channels: Array<keyof MiddlewareMap>
+    channels: readonly (keyof MiddlewareMap)[]
   ): MiddlewareRecord<MiddlewareMap> {
     return Object.fromEntries(
       channels.map((channel) => [channel, new this()])
