@@ -4,13 +4,14 @@ import type { MiddlewareResult, ModuleData, ModuleHandler } from "../types";
 
 type Methods = typeof methods extends readonly (infer T)[] ? T : never;
 
-type RouterChannelRecord = Record<
-  Methods,
-  ModuleData & { locals: Record<string, any> }
->;
+export type RouteHandlerData = ModuleData & {
+  locals: Record<string, any>;
+};
+
+type RouterChannelRecord = Record<Methods, RouteHandlerData>;
 
 export type RouteHandler = (
-  data: ModuleData
+  data: RouteHandlerData
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 
 type RouteMatcher = string | RegExp | ((route: MatchedRoute) => boolean);
@@ -133,6 +134,8 @@ export default class Router implements RouteMethodRecord {
 
       if (!channel)
         throw new Error(`could not find channel for '${request.method}'`);
+
+      if (channel.keys().length == 0) return;
 
       const result = await channel.call({
         request,

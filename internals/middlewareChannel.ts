@@ -50,8 +50,12 @@ export class MiddlewareChannel<Data> {
     }
   }
 
-  listByName() {
+  keys() {
     return Object.keys(this.middlewares);
+  }
+
+  listByName() {
+    return;
   }
 
   static createRecord<MiddlewareMap extends Record<string, any>>(
