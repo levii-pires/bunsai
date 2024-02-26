@@ -66,9 +66,9 @@ export class FSCache {
   /**
    * @param filename Absolute original file path
    */
-  invalidate(filename: string, options?: RmOptions) {
+  invalidate(filename: string, options?: Omit<RmOptions, "force">) {
     const cachePath = this.getCachePath(filename);
 
-    return rm(cachePath, options);
+    return rm(cachePath, { ...options, force: true });
   }
 }

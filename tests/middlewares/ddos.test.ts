@@ -22,7 +22,7 @@ describe("DDOS Middleware", () => {
     });
 
     const init = {
-      headers: { "x-forwarded-for": "1, 2, 3" },
+      headers: { "X-Forwarded-For": "1, 2, 3" },
     };
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
@@ -51,7 +51,7 @@ describe("DDOS Middleware", () => {
     });
 
     const init = {
-      headers: { "x-real-ip": "3" },
+      headers: { "X-Real-IP": "3" },
     };
 
     await server.fetch(new Request("https://127.0.0.1:3000/html", init));
@@ -66,10 +66,12 @@ describe("DDOS Middleware", () => {
       new Request("https://127.0.0.1:3000/html", init)
     );
 
-    expect(response1.status).toBe(429);
-    expect(response2.status).toBe(200);
-
-    remove();
+    try {
+      expect(response1.status).toBe(429);
+      expect(response2.status).toBe(200);
+    } finally {
+      remove();
+    }
   });
 
   it("should block the request using 'server.requestIP' strategy", async () => {
@@ -83,25 +85,27 @@ describe("DDOS Middleware", () => {
     });
 
     const init = {
-      headers: { "x-forwarded-for": "1, 2, 3" },
+      headers: { "X-Forwarded-For": "1, 2, 3" },
     };
 
-    await server.fetch(new Request("https://127.0.0.1:3000/html", init));
-    await server.fetch(new Request("https://127.0.0.1:3000/html", init));
-    await server.fetch(new Request("https://127.0.0.1:3000/html", init));
+    try {
+      await server.fetch(new Request("https://127.0.0.1:3000/html", init));
+      await server.fetch(new Request("https://127.0.0.1:3000/html", init));
+      await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    await setTimeout(10);
+      await setTimeout(10);
 
-    await server.fetch(new Request("https://127.0.0.1:3000/html", init));
+      await server.fetch(new Request("https://127.0.0.1:3000/html", init));
 
-    await setTimeout(10);
+      await setTimeout(10);
 
-    expect(instance.requestCountTable["1"]).toBe(4);
+      expect(instance.requestCountTable["1"]).toBe(4);
 
-    await setTimeout(10);
+      await setTimeout(10);
 
-    expect(instance.requestCountTable["1"]).toBeUndefined();
-
-    remove();
+      expect(instance.requestCountTable["1"]).toBeUndefined();
+    } finally {
+      remove();
+    }
   });
 });

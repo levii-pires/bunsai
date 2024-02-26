@@ -36,7 +36,7 @@ export interface CORSOptions {
 }
 
 function parseList(input: string | string[]) {
-  if (Array.isArray(input)) return input.join(",");
+  if (Array.isArray(input)) return input.join();
 
   return input;
 }
@@ -108,7 +108,7 @@ function resolveOrigin(
       return options.origin(request);
     }
     case "string": {
-      return options.origin;
+      return options.origin.includes(requestOrigin) ? options.origin : false;
     }
     default: {
       return false;

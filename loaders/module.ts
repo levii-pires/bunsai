@@ -26,7 +26,7 @@ const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
 
     if (shouldCache) {
       if (invalidate(data)) {
-        await cache.invalidate(filePath, { force: true });
+        await cache.invalidate(filePath);
       } else {
         const inCache = cache.file(filePath);
 
