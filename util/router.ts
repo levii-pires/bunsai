@@ -5,7 +5,27 @@ import type { MiddlewareResult, ModuleData, ModuleHandler } from "../types";
 type Methods = typeof methods extends readonly (infer T)[] ? T : never;
 
 export type RouteHandlerData = ModuleData & {
+  [RouterMatch]: boolean;
+  /**
+   * Share information between handlers
+   */
   locals: Record<string, any>;
+  /**
+   * Share response between handlers.
+   *
+   * Initial value: `null`
+   */
+  response(): Response | null;
+
+  /**
+   * Share response between handlers.
+   *
+   * Setting a response exempts you from the need to `return new Response()`, since the Router handler has access to the Response passed to this function.
+   * In fact, the handler will give preference to this Response over the Response returned by the handlers.
+   *
+   * @param response set new response
+   */
+  response(response: Response): void;
 };
 
 type RouterChannelRecord = Record<Methods, RouteHandlerData>;
@@ -42,6 +62,8 @@ function shouldHandleRequest(matcher: RouteMatcher, route: MatchedRoute) {
   return false;
 }
 
+const RouterMatch = Symbol("RouterMatch");
+
 const methods = [
   "GET",
   "HEAD",
@@ -53,8 +75,6 @@ const methods = [
 ] as const;
 
 export default class Router implements RouteMethodRecord {
-  childRoutes: Router[] = [];
-
   record = MiddlewareChannel.createRecord<RouterChannelRecord>(methods);
 
   get(matcher: RouteMatcher, ...handlers: RouteHandler[]) {
@@ -107,6 +127,14 @@ export default class Router implements RouteMethodRecord {
     return this;
   }
 
+  append(child: Router) {
+    for (const method of methods) {
+      this.record[method].append(child.record[method]);
+    }
+
+    return this;
+  }
+
   protected register(
     key: keyof RouterChannelRecord,
     matcher: RouteMatcher,
@@ -117,11 +145,21 @@ export default class Router implements RouteMethodRecord {
       async (data) => {
         if (!shouldHandleRequest(matcher, data.route)) return;
 
-        for (const handler of handlers) {
-          const response = await handler(data);
+        data[RouterMatch] = true;
 
-          if (response) return response;
+        for (const handler of handlers) {
+          const result = await handler(data);
+
+          if (result) return result;
         }
+
+        return (
+          data.response() ||
+          new Response(null, {
+            status: 501,
+            statusText: `'${data.route.pathname}' handlers returned nothing`,
+          })
+        );
       }
     );
   }
@@ -129,24 +167,33 @@ export default class Router implements RouteMethodRecord {
   get handler(): ModuleHandler {
     const that = this;
 
-    return async ({ request, route, server }) => {
+    return async function RouterHandler({ request, route, server }) {
       const channel = that.record[request.method as Methods];
 
       if (!channel)
         throw new Error(`could not find channel for '${request.method}'`);
 
-      if (channel.keys().length == 0) return;
+      if (channel.size == 0) return new Response(null, { status: 405 });
 
-      const result = await channel.call({
+      let response: Response | null = null;
+
+      const data: RouteHandlerData = {
         request,
         route,
         server,
         locals: {},
-      });
+        // @ts-ignore
+        response(res) {
+          if (res) response = res;
+          else return response;
+        },
+      };
 
-      if (!result) throw new Error(`channel call must return Response`);
+      const channelResponse = await channel.call(data);
 
-      return result;
+      if (!data[RouterMatch]) return new Response(null, { status: 404 });
+
+      return channelResponse!;
     };
   }
 }
