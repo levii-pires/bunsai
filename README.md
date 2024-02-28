@@ -343,6 +343,7 @@ The matchers can be:
 - String: Router will use the `String.endsWith` approach, except if the string is `'*'` which has the default wildcard behavior;
 - RegExp: `regex.test(route.pathname)` will be used;
 - Function: return `true` if the request should be accepted.
+- Array: todo: terminar
 
 ```ts
 // pages/[...fun].ts
