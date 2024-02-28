@@ -3,12 +3,12 @@ import { ModuleLoaderInit } from "./loaders";
 import getNunjucksLoader from "./loaders/nunjucks";
 import getSassLoader from "./loaders/sass";
 import DDOS from "./middlewares/ddos";
-import getCORS from "./middlewares/cors";
+import CORS from "./middlewares/cors";
 
 export default function getRecommended(opts?: RecommendedOpts): Recommended {
   const nunjucks = getNunjucksLoader(opts?.nunjucks?.options);
 
-  const { preflight, response } = getCORS(opts?.middlewares?.cors);
+  const { preflight, response } = CORS(opts?.middlewares?.cors);
 
   return {
     get nunjucksEnv() {
