@@ -35,7 +35,9 @@ export type RouteHandler = (
   data: RouteHandlerData
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 
-type RouteMatcher = string | RegExp | ((route: MatchedRoute) => boolean);
+type RouteMatcherPrimitives = string | RegExp | ((route: MatchedRoute) => boolean);
+
+export type RouteMatcher = RouteMatcherPrimitives | RouteMatcherPrimitives[]
 
 type RouteMethod = (
   matcher: RouteMatcher,
@@ -50,16 +52,16 @@ type RouteMethodRecord = Record<
 function shouldHandleRequest(matcher: RouteMatcher, route: MatchedRoute) {
   const normalizedPathname = new URL(route.pathname, "http://a.b/").pathname;
 
-  if (typeof matcher == "string") {
-    if (matcher === "*") return true;
-
-    return matcher.endsWith(normalizedPathname);
-  }
-
+  if (matcher == "*") return true;
+  
   if (matcher instanceof RegExp) return matcher.test(normalizedPathname);
-
+  
+  if (typeof matcher == "string") return matcher.endsWith(normalizedPathname);
+  
   if (typeof matcher == "function") return matcher(route);
 
+  if(Array.isArray(matcher)) return matcher.some((m) => shouldHandleRequest(m, route));
+  
   return false;
 }
 
