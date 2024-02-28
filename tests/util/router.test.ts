@@ -48,4 +48,22 @@ describe("Router", () => {
       "'/not-implemented' handlers returned nothing"
     );
   });
+
+  it("should get response from array matcher", async () => {
+    const responseString = await server.fetch(
+      new Request("http://bun.test/array-string-matcher")
+    );
+
+    const responseRegex = await server.fetch(
+      new Request("http://bun.test/array-regex-matcher")
+    );
+
+    const responseFn = await server.fetch(
+      new Request("http://bun.test/array-fn-matcher")
+    );
+
+    expect(await responseString.text()).toBe("array");
+    expect(await responseRegex.text()).toBe("array");
+    expect(await responseFn.text()).toBe("array");
+  });
 });

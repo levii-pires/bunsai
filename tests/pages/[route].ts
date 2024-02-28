@@ -5,4 +5,12 @@ export const { handler } = new Router()
     response(new Response(null, { status: 204 }))
   )
   .get("/router-return", () => new Response(null, { status: 206 }))
-  .get("/not-implemented");
+  .get("/not-implemented")
+  .get(
+    [
+      "/array-string-matcher",
+      /\/array-regex-matcher$/,
+      ({ pathname }) => pathname.endsWith("/array-fn-matcher"),
+    ],
+    () => new Response("array")
+  );
