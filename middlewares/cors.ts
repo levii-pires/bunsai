@@ -1,6 +1,9 @@
-import { MatchedRoute, Server } from "bun";
-import { Middleware } from "../internals";
-import { MiddlewareRunnerWithThis } from "../types";
+import type { MatchedRoute, Server } from "bun";
+import type {
+  BunSaiMiddlewareRecord,
+  MiddlewareRunnerWithThis,
+} from "../types";
+import { Middleware, MiddlewareRecord } from "../internals";
 
 export interface CORSOptions {
   /**
@@ -195,9 +198,19 @@ export class CORSResponse extends Middleware<"response"> {
   };
 }
 
-export default function getCORS(options: CORSOptions = {}) {
+export default function CORS(options: CORSOptions = {}) {
   return {
     preflight: new CORSPreflight(options),
     response: new CORSResponse(options),
   };
 }
+
+CORS.inject = (
+  middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
+  options: CORSOptions = {}
+) => {
+  const preflight = CORSPreflight.inject(middlewares, options);
+  const response = CORSResponse.inject(middlewares, options);
+
+  return { response, preflight };
+};
