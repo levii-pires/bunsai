@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { getInstance } from "../testing";
 import { ModuleLoaderInit } from "../../loaders";
 
-const { bunsai, server } = getInstance({
+const { server } = getInstance({
   loaders: {
     ".ts": ModuleLoaderInit,
   },

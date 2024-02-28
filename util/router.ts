@@ -5,6 +5,7 @@ import type { MiddlewareResult, ModuleData, ModuleHandler } from "../types";
 type Methods = typeof methods extends readonly (infer T)[] ? T : never;
 
 export type RouteHandlerData = ModuleData & {
+  // internal use
   [RouterMatch]: boolean;
   /**
    * Share information between handlers

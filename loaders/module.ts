@@ -22,7 +22,7 @@ const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
         `${filePath}: Should have an export named "handler" of type "function"`
       );
 
-    const shouldCache = typeof invalidate == "function";
+    const shouldCache = typeof invalidate == "function" && !dev;
 
     if (shouldCache) {
       if (invalidate(data)) {

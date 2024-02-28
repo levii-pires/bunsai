@@ -12,7 +12,7 @@ As the version implies (v0.x.x), this API is not yet stable and can be breaking 
 
 ## Quick start
 
-BunSai is a full-stack, zero dependency, agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks and Sass as optional dependencies). You can install it:
+BunSai is a full-stack, zero dependency, agnostic framework for the web, built upon [Bun](https://bun.sh) (in fact, it has Nunjucks, Sass and Stylus as optional dependencies). You can install it:
 
 ```sh
 bun add bunsai
@@ -24,10 +24,7 @@ And use it as a handler:
 import BunSai from "bunsai";
 
 const { fetch } = new BunSai({
-  /*
-    "loaders" is the only required property, as it configures BunSai's behavior
-  */
-  loaders,
+  /* ... */
 });
 
 Bun.serve({
@@ -40,9 +37,11 @@ Bun.serve({
 Powered by [`Bun.FileSystemRouter`](https://bun.sh/docs/api/file-system-router) and some fancy tricks, BunSai takes an approach where you declare the files you want to become "routes"
 
 ```js
-loaders: {
-  ".ext": loaderInitiator
-}
+new BunSai({
+  loaders: {
+    ".ext": loaderInitiator,
+  },
+});
 ```
 
 And all files with that file extension will be served as routes.
@@ -75,7 +74,7 @@ new BunSai({
 });
 ```
 
-> Check the [`LoaderInitiator`](./types.ts#L10) interface
+> Check the [`LoaderInitiator`](./types.ts#L12) interface
 
 You can also specify file extensions that will be served staticly (`return new Response(Bun.file(filePath))`), like so:
 
@@ -149,11 +148,33 @@ new BunSai({
 });
 ```
 
+### [Stylus](https://stylus-lang.com/)
+
+> Since v0.3.0
+
+Stylus is an expressive, robust, feature-rich CSS language. It's compiler is a bit less performant than [Sass](#sass), but I thought it was a nice feature to add.
+
+```sh
+bun add stylus
+```
+
+```js
+import getStylusLoader from "bunsai/loaders/stylus";
+
+const loaderInit = getStylusLoader(/* (optional) stylus compiler options */);
+
+new BunSai({
+  loaders: {
+    ".styl": loaderInit,
+  },
+});
+```
+
 ### Module
 
-> Since v0.1.0. Last change v0.2.0
+> Since v0.1.0. Last change v0.3.0
 
-BonSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
+BunSai offers a simple module implementation to handle `.ts`, `.tsx`, `.js` and `.node` files:
 
 ```js
 import { ModuleLoaderInit } from "bunsai/loaders";
@@ -174,6 +195,17 @@ export const headers = {
   // The default Content-Type header is "text/html; charset=utf-8", but you can override it.
 };
 
+// optional
+export function invalidate(data: ModuleData) {
+  /**
+   * Returning true will invalidate the cached result, deleting it from the disk and running the handler again.
+   *
+   * If this method is not implemented, the ModuleLoader will always run the handler.
+   *
+   * **NOTE:** caching is ignored if dev is true.
+   */
+}
+
 // required
 export function handler(data: ModuleData) {
   // data.server => Server
@@ -186,23 +218,24 @@ export function handler(data: ModuleData) {
 
 ### Recommended
 
-> Since v0.1.0. Last change v0.2.0
+> Since v0.1.0. Last change v0.3.0
 
 If you liked BunSai's opinion and want to enjoy all this beauty, you can use the recommended configuration:
 
 ```js
 import getRecommended from "bunsai/recommended";
 
-const { loaders, staticFiles } =
+const { loaders, staticFiles, middlewares } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
 new BunSai({
   loaders,
   staticFiles,
+  middlewares,
 });
 ```
 
-> Check the [`Recommended`](./types.ts#L67) interface.
+> Check the [`Recommended`](./types.ts#L121) interface.
 
 ## Middlewares
 
@@ -284,4 +317,57 @@ middlewares.error
   .add(/* can be chained */);
 
 middlewares.error.remove("name").remove(/* can be chained */);
+```
+
+## Utils
+
+### Router
+
+> Since v0.3.0
+
+Router was designed to be a facilitator in building APIs that use [Module](#module) loader.
+
+It makes more sense to use Router on files that use the following filename syntaxes: `"catch-all" | "optional-catch-all" | "dynamic"`
+
+The Router is a simple utility that abstracts the workflow of an HTTP API.
+HTTP methods are classified as class methods.
+
+The Router has some rules for implementing handlers:
+
+- If you did not declare any 'POST' handler and the client made a POST request, the Router will automatically return `405 Method Not Allowed`;
+- If none of the matchers returned `true` for the given path, the Router returns `404 Not Found`;
+- If the handler call chain has ended, but no response was given, `501 Not Implemented` is returned;
+
+The matchers can be:
+
+- String: Router will use the `String.endsWith` approach, except if the string is `'*'` which has the default wildcard behavior;
+- RegExp: `regex.test(route.pathname)` will be used;
+- Function: return `true` if the request should be accepted.
+
+```ts
+// pages/[...fun].ts
+
+import { Router } from "bunsai/util";
+// or
+import Router from "bunsai/util/router";
+
+export const { handler } = new Router()
+  .get("/a", ({ response }) =>
+    // You can set the response using the 'response' method, thus not breaking the call chain
+    // and also allowing other handlers to access the response by calling 'response(/* no parameters */)'
+    response(new Response(null, { status: 204 }))
+  )
+  .post(
+    /\/b/,
+    () => {
+      // Or you can return a response and break the call chain.
+      // This way is the fastest, but you must have in mind that this will be the last called handler
+      return new Response(null, { status: 206 });
+    },
+    () => {
+      // This handler will never be called
+    }
+  )
+  .put(({ pathname }) => pathname == "/c" /* ... */)
+  .delete(/* ... */);
 ```
