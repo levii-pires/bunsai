@@ -108,10 +108,9 @@ const nunjucks =
 
 new BunSai({
   loaders: {
-    ".njk": nunjucksLoader.loaderInit,
+    ".njk": nunjucks.loaderInit,
   },
 });
-
 
 nunjucks.env;
 // you can make changes on the nunjucks Environment object (the 'nunjuck.env' object),
@@ -247,7 +246,61 @@ nunjucks.env();
 
 ## Middlewares
 
-### Response Middlewares
+Middlewares can be used both on "start up" and during lifetime.
+
+### Builtin Middlewares
+
+> Since v0.3.0
+
+Builtin middlewares are [Middleware](./internals/middleware.ts#L8) class extensions and can be used on BunSai construction:
+
+```ts
+new BunSai({
+  middlewares: [new Middleware()],
+});
+```
+
+And during lifetime (using the `inject` static method):
+
+```ts
+const { middlewares } = new BunSai();
+
+Middleware.inject(middlewares /*, ... constructor args */);
+```
+
+At this moment, BunSai ships with:
+
+- DDOS `import DDOS from "bunsai/middlewares/ddos"`
+- CORS `import CORS, { CORSPreflight, CORSResponse } from "bunsai/middlewares/cors"`
+
+> To ask for more middlewares, click [here](https://github.com/levii-pires/bunsai/issues)
+
+### Creating you own distributable middleware
+
+A distributable middleware should extend the [Middleware](./internals/middleware.ts) abstract class
+
+```ts
+import Middleware from "bunsai/internals/middleware";
+
+export default class MyMiddleware extends Middleware<
+  "response" | "request" | "notFound" | "error"
+> {
+  name = "unique name";
+  runsOn = "response" | "request" | "notFound" | "error";
+
+  protected $runner: MiddlewareRunnerWithThis<MiddlewareData, this> = function (
+    data
+  ) {
+    // middleware implementation
+  };
+}
+```
+
+### BunSai Middleware Record
+
+During lifetime, BunSai categorizes middlewares into 4 groups:
+
+#### Response Middlewares
 
 > Since v0.1.0. Last change v0.2.0
 
@@ -271,7 +324,7 @@ middlewares.response
 middlewares.response.remove("name").remove(/* can be chained */);
 ```
 
-### Request Middlewares
+#### Request Middlewares
 
 > Since v0.1.0. Last change v0.2.0
 
@@ -291,7 +344,7 @@ middlewares.request
 middlewares.request.remove("name").remove(/* can be chained */);
 ```
 
-### "Not Found" Middlewares
+#### "Not Found" Middlewares
 
 > Since v0.1.0. Last change v0.2.0
 
@@ -309,7 +362,7 @@ middlewares.notFound
 middlewares.notFound.remove("name").remove(/* can be chained */);
 ```
 
-### Error Middlewares
+#### Error Middlewares
 
 > Since v0.3.0
 
@@ -335,7 +388,7 @@ middlewares.error.remove("name").remove(/* can be chained */);
 
 Router was designed to be a facilitator in building APIs that use the [Module](#module) loader.
 
-It makes more sense to use Router on files that use the following filename syntaxes: `"catch-all" | "optional-catch-all" | "dynamic"`
+It makes more sense to use Router on files that use the following filename syntaxes: `[...catch-all] | [[...optional-catch-all]] | [dynamic]`
 
 The Router is a simple utility that abstracts the workflow of an HTTP API.
 HTTP methods are classified as class methods.
@@ -365,7 +418,9 @@ import Router from "bunsai/util/router";
 // a function matcher should always be a unique named function,
 // to avoid the MiddlewareChannel error "'' already exists on this middleware channel"
 // (Router uses MiddlewareChannel under the hood).
-function matcher({ pathname }) { return pathname == "/c"; }
+function matcher({ pathname }) {
+  return pathname == "/c";
+}
 
 export const { handler } = new Router()
   .get("/a", ({ response }) =>
@@ -390,9 +445,10 @@ export const { handler } = new Router()
 
 #### Tips
 
+- Since Router always return a Response object, the `headers` object will be ignored by the [loader](#module).
 - The fastest matcher is `"*"`.
 - The second fastest matcher is RegExp.
 - Never declare strings, RegExp, arrays or functions that have equal structures (or function names);
   when the Router declares your handler on the channel it uses `matcher.name ?? matcher.toString()`.
 - Also avoid unnamed function matchers, as an unnamed function 'name' property will always be an empty string;
-  this way you will avoid `Error: '' already exists on this middleware channel` when declaring two unnamed functions on the GET channel (e.g.). 
+  this way you will avoid `Error: '' already exists on this middleware channel` when declaring two unnamed functions on the GET channel (e.g.).
