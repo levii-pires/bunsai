@@ -79,7 +79,9 @@ new BunSai({
 You can also specify file extensions that will be served staticly (`return new Response(Bun.file(filePath))`), like so:
 
 ```js
-staticFiles: [".jpg", ".css", ".aac"];
+new BunSai({
+  staticFiles: [".jpg", ".css", ".aac"],
+});
 ```
 
 > There is a caveat around `staticFiles`: as all files are served using the FileSystemRouter, `pages/pic.jpeg` will be served as `/pic`
@@ -90,7 +92,7 @@ BunSai is 100% flexible, but this does not mean that it cannot be opinionated. B
 
 ### [Nunjucks](https://mozilla.github.io/nunjucks/)
 
-> Since v0.1.0. Last change v0.2.0
+> Since v0.1.0. Last change v0.3.0
 
 Nunjucks is a rich powerful templating language with block inheritance, autoescaping, macros, asynchronous control, and more. Heavily inspired by jinja2.
 
@@ -101,18 +103,20 @@ bun add nunjucks @types/nunjucks
 ```js
 import getNunjucksLoader from "bunsai/loaders/nunjucks";
 
-const nunjucksLoader =
+const nunjucks =
   getNunjucksLoader(/* (optional) root path and nunjucks configure options */);
-
-nunjucksLoader.env;
-// you can make changes on the nunjucks Environment object (the 'nunjucksLoader.env' object).
-// See https://mozilla.github.io/nunjucks/api.html#environment
 
 new BunSai({
   loaders: {
     ".njk": nunjucksLoader.loaderInit,
   },
 });
+
+
+nunjucks.env;
+// you can make changes on the nunjucks Environment object (the 'nunjuck.env' object),
+// **after** BunSai instance creation.
+// See https://mozilla.github.io/nunjucks/api.html#environment
 ```
 
 ```html
@@ -198,11 +202,11 @@ export const headers = {
 // optional
 export function invalidate(data: ModuleData) {
   /**
-   * Returning true will invalidate the cached result, deleting it from the disk and running the handler again.
+   * Returning true will invalidate the cached result, deleting it from the disk and rerunning the handler.
    *
    * If this method is not implemented, the ModuleLoader will always run the handler.
    *
-   * **NOTE:** caching is ignored if dev is true.
+   * **NOTE:** caching is ignored if dev mode is enabled.
    */
 }
 
@@ -225,7 +229,8 @@ If you liked BunSai's opinion and want to enjoy all this beauty, you can use the
 ```js
 import getRecommended from "bunsai/recommended";
 
-const { loaders, staticFiles, middlewares } =
+// NOTE: Stylus is not included in the recommended interface
+const { loaders, staticFiles, middlewares, nunjucks } =
   getRecommended(/* (optional) nunjucks and sass options */);
 
 new BunSai({
@@ -233,6 +238,9 @@ new BunSai({
   staticFiles,
   middlewares,
 });
+
+// Get nunjucks environment **after** BunSai instance creation
+nunjucks.env();
 ```
 
 > Check the [`Recommended`](./types.ts#L121) interface.
@@ -325,25 +333,27 @@ middlewares.error.remove("name").remove(/* can be chained */);
 
 > Since v0.3.0
 
-Router was designed to be a facilitator in building APIs that use [Module](#module) loader.
+Router was designed to be a facilitator in building APIs that use the [Module](#module) loader.
 
 It makes more sense to use Router on files that use the following filename syntaxes: `"catch-all" | "optional-catch-all" | "dynamic"`
 
 The Router is a simple utility that abstracts the workflow of an HTTP API.
 HTTP methods are classified as class methods.
 
-The Router has some rules for implementing handlers:
+#### Rules
 
-- If you did not declare any 'POST' handler and the client made a POST request, the Router will automatically return `405 Method Not Allowed`;
+- If you did not declare any 'POST' handler and the client made a POST request, the Router will automatically return `405 Method Not Allowed` (e.g.);
 - If none of the matchers returned `true` for the given path, the Router returns `404 Not Found`;
-- If the handler call chain has ended, but no response was given, `501 Not Implemented` is returned;
+- If the handler call chain has ended, but no response was given, `501 Not Implemented` is returned and with the following status text: `'%pathname%' handlers returned nothing`;
 
-The matchers can be:
+#### Matchers
 
 - String: Router will use the `String.endsWith` approach, except if the string is `'*'` which has the default wildcard behavior;
 - RegExp: `regex.test(route.pathname)` will be used;
-- Function: return `true` if the request should be accepted.
-- Array: todo: terminar
+- Function: return `true` if the request should be accepted;
+- Array: an array containing any of the previous matchers. `Array.some` approach will be used;
+
+#### Implementing
 
 ```ts
 // pages/[...fun].ts
@@ -352,23 +362,37 @@ import { Router } from "bunsai/util";
 // or
 import Router from "bunsai/util/router";
 
+// a function matcher should always be a unique named function,
+// to avoid the MiddlewareChannel error "'' already exists on this middleware channel"
+// (Router uses MiddlewareChannel under the hood).
+function matcher({ pathname }) { return pathname == "/c"; }
+
 export const { handler } = new Router()
   .get("/a", ({ response }) =>
     // You can set the response using the 'response' method, thus not breaking the call chain
-    // and also allowing other handlers to access the response by calling 'response(/* no parameters */)'
+    // and also allowing other handlers to access the response by calling 'response()'
     response(new Response(null, { status: 204 }))
   )
   .post(
     /\/b/,
     () => {
       // Or you can return a response and break the call chain.
-      // This way is the fastest, but you must have in mind that this will be the last called handler
+      // This is the fastest way, but you must have in mind that this will be the last called handler
       return new Response(null, { status: 206 });
     },
     () => {
       // This handler will never be called
     }
   )
-  .put(({ pathname }) => pathname == "/c" /* ... */)
+  .put(matcher, () => {})
   .delete(/* ... */);
 ```
+
+#### Tips
+
+- The fastest matcher is `"*"`.
+- The second fastest matcher is RegExp.
+- Never declare strings, RegExp, arrays or functions that have equal structures (or function names);
+  when the Router declares your handler on the channel it uses `matcher.name ?? matcher.toString()`.
+- Also avoid unnamed function matchers, as an unnamed function 'name' property will always be an empty string;
+  this way you will avoid `Error: '' already exists on this middleware channel` when declaring two unnamed functions on the GET channel (e.g.). 
