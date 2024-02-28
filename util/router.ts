@@ -144,7 +144,7 @@ export default class Router implements RouteMethodRecord {
     handlers: RouteHandler[]
   ) {
     this.record[key].add(
-      (matcher as Function).name || matcher.toString(),
+      (matcher as Function).name ?? matcher.toString(),
       async (data) => {
         if (!shouldHandleRequest(matcher, data.route)) return;
 
