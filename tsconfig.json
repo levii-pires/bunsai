@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
     "strict": true,
-    "module": "ES2022",
+    "module": "ESNext",
     "target": "ES2022",
     "declaration": true,
     "esModuleInterop": true,
     "moduleResolution": "Node",
     "isolatedModules": true,
     "sourceMap": true,
+    "noEmit": true,
     "types": ["@types/bun"]
   }
 }

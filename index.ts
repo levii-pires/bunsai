@@ -7,99 +7,104 @@ import type {
   BunSaiMiddlewareRecord,
 } from "./types";
 import { extname } from "path";
-import { resolveOptions, getStatic, initLoaders } from "./internals";
-import MiddlewareChannel from "./internals/middleware";
+import * as Internals from "./internals";
 
-/**
- * The marked methods `$method(...)` are `this` dependent,
- * while the non-marked methods `method(...)` are getters that returns a bound `$method`
- */
 export default class BunSai {
-  protected options: ResolvedBunSaiOptions;
-  protected router: InstanceType<typeof Bun.FileSystemRouter>;
-  protected routeLoaders: LoaderMap = {};
-
+  readonly router: InstanceType<typeof Bun.FileSystemRouter>;
+  readonly routeLoaders: LoaderMap = {};
+  readonly options: ResolvedBunSaiOptions;
   readonly middlewares =
-    MiddlewareChannel.createMiddlewareRecord<BunSaiMiddlewareRecord>([
+    Internals.MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>([
       "notFound",
       "request",
       "response",
+      "error",
     ]);
 
   constructor(options: BunSaiOptions) {
-    this.options = resolveOptions(options);
+    this.options = Internals.resolveOptions(options);
+
+    const fileExtensions = this.options.staticFiles.concat(
+      Object.keys(this.options.loaders) as Extname[]
+    );
 
     this.router = new Bun.FileSystemRouter({
       ...this.options,
       style: "nextjs",
-      fileExtensions: this.options.staticFiles.concat(
-        Object.keys(this.options.loaders) as Extname[]
-      ),
+      fileExtensions,
     });
 
-    Object.assign(
-      this.routeLoaders,
-      getStatic(this.options.staticFiles, this.options)
-    );
-
-    Object.assign(
-      this.routeLoaders,
-      initLoaders(this.options.loaders, this.options)
-    );
+    Internals.getStatic(this);
+    Internals.initLoaders(this);
+    Internals.initMiddlewares(this);
   }
 
-  $reloadRouter() {
+  protected $reloadRouter() {
     this.router.reload();
   }
 
-  async $fetch(request: Request, server: Server) {
-    const reqResult = await this.middlewares.request.call(
-      { request, server },
-      this.options.dev
-    );
+  protected async $fetch(request: Request, server: Server) {
+    try {
+      const reqResult = await this.middlewares.request.call(
+        { request, server },
+        this.options.dev
+      );
 
-    if (reqResult) return reqResult;
+      if (reqResult) return reqResult;
 
-    const route = this.router.match(request);
+      const route = this.router.match(request);
 
-    if (!route) {
-      const nfMidResult = await this.middlewares.notFound.call(
+      if (!route) {
+        const nfMidResult = await this.middlewares.notFound.call(
+          {
+            request,
+            server,
+          },
+          this.options.dev
+        );
+
+        return nfMidResult || new Response(null, { status: 404 });
+      }
+
+      const loader =
+        this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
+
+      if (!loader) throw new Internals.LoaderNotFoundError(request);
+
+      const response = await (
+        await loader
+      )(route.filePath, { server, request, route });
+
+      const resResult = await this.middlewares.response.call(
         {
+          route,
+          response,
           request,
           server,
         },
         this.options.dev
       );
 
-      return nfMidResult || new Response(null, { status: 404 });
+      return resResult || response;
+    } catch (error) {
+      const errResult = await this.middlewares.error.call(
+        {
+          error,
+          request,
+          server,
+        },
+        this.options.dev
+      );
+
+      if (errResult) return errResult;
+
+      throw error;
     }
-
-    const loader =
-      this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
-
-    if (!loader)
-      return new Response(null, {
-        status: 500,
-        statusText: `INTERNAL_SERVER_ERROR: '${request.url}' does not have an appropriate loader`,
-      });
-
-    const response = await loader(route.filePath, { server, request, route });
-
-    const resResult = await this.middlewares.response.call(
-      {
-        route,
-        response,
-        request,
-        server,
-      },
-      this.options.dev
-    );
-
-    return resResult || response;
   }
 
   /**
-   * @deprecated Since v0.2.0
+   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
+   * @deprecated
    */
   addMiddleware(): never {
     throw new Error(
@@ -108,7 +113,8 @@ export default class BunSai {
   }
 
   /**
-   * @deprecated Since v0.2.0
+   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
+   * @deprecated
    */
   removeMiddleware(): never {
     throw new Error(
@@ -117,7 +123,11 @@ export default class BunSai {
   }
 
   get fetch() {
-    return this.$fetch.bind(this);
+    const that = this;
+
+    return function (this: Server, request: Request) {
+      return that.$fetch(request, this);
+    };
   }
 
   get reloadRouter() {
