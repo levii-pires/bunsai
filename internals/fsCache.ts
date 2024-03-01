@@ -64,6 +64,45 @@ export class FSCache {
   }
 
   /**
+   * Load the file as an ArrayBuffer.
+   *
+   * @param filename Absolute original file path
+   * @returns Possible return values:
+   * - `[arrayBuffer, null]` => No problems here
+   * - `[null, null]` => File not found
+   * - `[null, error]` => Something went wrong
+   */
+  async load(
+    filename: string,
+    options?: BlobPropertyBag
+  ): Promise<[ArrayBuffer, null] | [null, ErrnoException | null]> {
+    const file = this.file(filename, options);
+
+    try {
+      return [await file.arrayBuffer(), null];
+    } catch (error) {
+      if ((error as ErrnoException).code == "ENOENT") return [null, null];
+
+      return [null, error as ErrnoException];
+    }
+  }
+
+  /**
+   * {@link load} as {@link Response}
+   */
+  async loadResponse(
+    filename: string,
+    init?: ResponseInit,
+    options?: BlobPropertyBag
+  ) {
+    const [inCache, error] = await this.load(filename, options);
+
+    if (inCache) return new Response(inCache, init);
+    else if (error) throw error;
+    else return null;
+  }
+
+  /**
    * @param filename Absolute original file path
    */
   invalidate(filename: string, options?: Omit<RmOptions, "force">) {

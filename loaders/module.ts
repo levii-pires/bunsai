@@ -28,10 +28,12 @@ const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
       if (invalidate(data)) {
         await cache.invalidate(filePath);
       } else {
-        const inCache = cache.file(filePath);
+        const inCache = await cache.loadResponse(
+          filePath,
+          responseInit(headers)
+        );
 
-        if (await inCache.exists())
-          return new Response(inCache, responseInit(headers));
+        if (inCache) return inCache;
       }
     }
 

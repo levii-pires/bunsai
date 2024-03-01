@@ -17,9 +17,9 @@ export default function getSassLoader(
     return async (filePath, { request }) => {
       if (request.method != "GET") return new Response(null, { status: 405 });
 
-      const inCache = cache.file(filePath);
+      const inCache = await cache.loadResponse(filePath, responseInit);
 
-      if (await inCache.exists()) return new Response(inCache, responseInit);
+      if (inCache) return inCache;
 
       const result = compile(filePath, options).css;
 
