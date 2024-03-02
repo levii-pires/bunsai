@@ -35,9 +35,12 @@ export type RouteHandler = (
   data: RouteHandlerData
 ) => MiddlewareResult | Promise<MiddlewareResult>;
 
-type RouteMatcherPrimitives = string | RegExp | ((route: MatchedRoute) => boolean);
+type RouteMatcherPrimitives =
+  | string
+  | RegExp
+  | ((data: RouteHandlerData) => boolean);
 
-export type RouteMatcher = RouteMatcherPrimitives | RouteMatcherPrimitives[]
+export type RouteMatcher = RouteMatcherPrimitives | RouteMatcherPrimitives[];
 
 type RouteMethod = (
   matcher: RouteMatcher,
@@ -49,19 +52,23 @@ type RouteMethodRecord = Record<
   RouteMethod
 >;
 
-function shouldHandleRequest(matcher: RouteMatcher, route: MatchedRoute) {
-  const normalizedPathname = new URL(route.pathname, "http://a.b/").pathname;
+function shouldHandleRequest(
+  matcher: RouteMatcher,
+  data: RouteHandlerData
+): boolean {
+  const { pathname } = new URL(data.request.url);
 
   if (matcher == "*") return true;
-  
-  if (matcher instanceof RegExp) return matcher.test(normalizedPathname);
-  
-  if (typeof matcher == "string") return matcher.endsWith(normalizedPathname);
-  
-  if (typeof matcher == "function") return matcher(route);
 
-  if(Array.isArray(matcher)) return matcher.some((m) => shouldHandleRequest(m, route));
-  
+  if (matcher instanceof RegExp) return matcher.test(pathname);
+
+  if (typeof matcher == "string") return matcher.endsWith(pathname);
+
+  if (typeof matcher == "function") return matcher(data);
+
+  if (Array.isArray(matcher))
+    return matcher.some((m) => shouldHandleRequest(m, data));
+
   return false;
 }
 
@@ -146,7 +153,7 @@ export default class Router implements RouteMethodRecord {
     this.record[key].add(
       (matcher as Function).name ?? matcher.toString(),
       async (data) => {
-        if (!shouldHandleRequest(matcher, data.route)) return;
+        if (!shouldHandleRequest(matcher, data)) return;
 
         data[RouterMatch] = true;
 
