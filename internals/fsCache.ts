@@ -50,6 +50,7 @@ export class FSCache {
 
   /**
    * @param filename Absolute original file path
+   * @returns cached filename
    */
   async write(filename: string, input: WriteInput) {
     const cachePath = this.getCachePath(filename);
@@ -61,6 +62,8 @@ export class FSCache {
         rm(cachePath, { force: true })
       );
     }
+
+    return cachePath;
   }
 
   /**
