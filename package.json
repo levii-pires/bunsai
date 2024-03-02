@@ -22,7 +22,8 @@
     "@types/stylus": "^0.48.42",
     "nunjucks": "^3.2.4",
     "sass": "^1.70.0",
-    "stylus": "^0.62.0"
+    "stylus": "^0.62.0",
+    "svelte": "^4.2.12"
   },
   "engines": {
     "bun": ">=1.0.26"
@@ -38,5 +39,6 @@
   ],
   "license": "MIT",
   "private": false,
-  "type": "module"
+  "type": "module",
+  "dependencies": {}
 }
