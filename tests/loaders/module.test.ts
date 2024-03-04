@@ -1,12 +1,12 @@
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
-import { ModuleLoaderInit } from "../../loaders";
+import ModuleLoader from "../../loaders/module";
 
 describe("Module Loader", () => {
   loaderTest({
     bunsaiOpts: {
-      loaders: { ".ts": ModuleLoaderInit },
-      dir: "./tests/pages",
+      loaders: [new ModuleLoader()],
+      dir: "./pages",
       dev: false,
     },
     contentType: "text/html",

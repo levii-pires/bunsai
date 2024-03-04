@@ -19,9 +19,14 @@ export function loaderTest({
   responseIncludes,
   ignoreGET,
 }: TestOptions) {
-  const { server } = getInstance(bunsaiOpts);
+  const {
+    server,
+    bunsai: { ready },
+  } = getInstance(bunsaiOpts);
 
   it("should use cache", async () => {
+    await ready;
+
     const firstRunInit = nanoseconds();
     await server.fetch(new Request(`https://bun.test/${testKey}`));
     const firstRunEnd = nanoseconds();
@@ -37,6 +42,8 @@ export function loaderTest({
   });
 
   it(`should load ${testKey} files`, async () => {
+    await ready;
+
     const response = await server.fetch(
       new Request(`https://bun.test/${testKey}`)
     );
@@ -49,6 +56,8 @@ export function loaderTest({
   if (ignoreGET) return;
 
   it("should block non 'GET' methods", async () => {
+    await ready;
+
     const response1 = await server.fetch(
       new Request(`https://bun.test/${testKey}`, { method: "POST" })
     );
@@ -64,6 +73,8 @@ export function loaderTest({
 
 export function getInstance(options: BunSaiOptions) {
   const bunsai = new BunSai(options);
+
+  bunsai.setup();
 
   const server = Bun.serve({
     fetch: bunsai.fetch,

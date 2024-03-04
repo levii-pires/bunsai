@@ -1,14 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import { getInstance } from "../testing";
-import { ModuleLoaderInit } from "../../loaders";
+import ModuleLoader from "../../loaders/module";
 
-const { server } = getInstance({
-  loaders: {
-    ".ts": ModuleLoaderInit,
-  },
+const {
+  server,
+  bunsai: { setup },
+} = getInstance({
+  loaders: [new ModuleLoader()],
   dev: false,
-  dir: "./tests/pages",
+  dir: "./pages",
 });
+
+await setup();
 
 // warm up
 await server.fetch(new Request("http://bun.test/router-method"));

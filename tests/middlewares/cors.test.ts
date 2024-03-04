@@ -3,7 +3,7 @@ import { CORSPreflight, CORSResponse } from "../../middlewares/cors";
 import { getInstance } from "../testing";
 
 const { server, bunsai } = getInstance({
-  dir: "./tests/pages",
+  dir: "./pages",
   dev: false,
   staticFiles: [".html"],
 });

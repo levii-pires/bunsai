@@ -7,9 +7,8 @@ const {
   bunsai: { middlewares },
   server,
 } = getInstance({
-  loaders: {},
   staticFiles: [".html"],
-  dir: "./tests/pages",
+  dir: "./pages",
   dev: false,
 });
 

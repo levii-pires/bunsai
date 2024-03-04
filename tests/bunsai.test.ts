@@ -1,11 +1,11 @@
 import { describe, it, expect } from "bun:test";
 import { MiddlewareRunnerWithThis } from "..";
-import getNunjucksLoader from "../loaders/nunjucks";
+import NunjucksLoader from "../loaders/nunjucks";
 import { Server } from "bun";
-import { Middleware } from "../internals";
+import Middleware from "../internals/middleware";
 import { getInstance } from "./testing";
 
-const njkLoader = getNunjucksLoader();
+const nunjucks = new NunjucksLoader();
 
 const testStr = "mocked";
 
@@ -15,7 +15,7 @@ class MockMiddleware extends Middleware<"request"> {
 
   test = testStr;
 
-  $runner: MiddlewareRunnerWithThis<
+  runner: MiddlewareRunnerWithThis<
     { request: Request; server: Server },
     MockMiddleware
   > = function ({ request }) {
@@ -25,10 +25,10 @@ class MockMiddleware extends Middleware<"request"> {
 }
 
 const { server } = getInstance({
-  loaders: { ".njk": njkLoader.loaderInit },
+  loaders: [nunjucks],
   staticFiles: [".html"],
   dev: false,
-  dir: "./tests/pages",
+  dir: "./pages",
   middlewares: [new MockMiddleware()],
 });
 
