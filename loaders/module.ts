@@ -14,41 +14,53 @@ const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
 
   await cache.setup();
 
-  return async (filePath, data) => {
-    const { handler, headers, invalidate } = (await import(filePath)) as Module;
+  return {
+    async handle(filePath, data) {
+      const { handler, headers, invalidate } = (await import(
+        filePath
+      )) as Module;
 
-    if (typeof handler != "function")
-      throw new Error(
-        `${filePath}: Should have an export named "handler" of type "function"`
-      );
-
-    const shouldCache = typeof invalidate == "function" && !dev;
-
-    if (shouldCache) {
-      if (invalidate(data)) {
-        await cache.invalidate(filePath);
-      } else {
-        const inCache = await cache.loadResponse(
-          filePath,
-          responseInit(headers)
+      if (typeof handler != "function")
+        throw new Error(
+          `${filePath}: Should have an export named "handler" of type "function"`
         );
 
-        if (inCache) return inCache;
+      const shouldCache = typeof invalidate == "function" && !dev;
+
+      if (shouldCache) {
+        if (invalidate(data)) {
+          await cache.invalidate(filePath);
+        } else {
+          const inCache = await cache.loadResponse(
+            filePath,
+            responseInit(headers)
+          );
+
+          if (inCache) return inCache;
+        }
       }
-    }
 
-    const result = await handler(data);
+      const result = await handler(data);
 
-    if (shouldCache) {
-      await cache.write(
-        filePath,
-        result instanceof Response ? await result.arrayBuffer() : result
-      );
-    }
+      if (shouldCache) {
+        await cache.write(
+          filePath,
+          result instanceof Response ? await result.arrayBuffer() : result
+        );
+      }
 
-    if (result instanceof Response) return result;
+      if (result instanceof Response) return result;
 
-    return new Response(result, responseInit(headers));
+      return new Response(result, responseInit(headers));
+    },
+    build(filePath) {
+      return [
+        {
+          type: "module",
+          content: Bun.file(filePath),
+        },
+      ];
+    },
   };
 };
 

@@ -4,10 +4,31 @@ import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
 import type { CORSOptions } from "./middlewares/cors";
 
-export type Loader = (
-  filePath: string,
-  data: RequestData
-) => Response | Promise<Response>;
+export interface BuildResult {
+  /**
+   * How BunSai should name the file
+   *
+   * Special characters:
+   * - `$name`: original file name
+   * - `$ext` : original file extension
+   * - `$hash`: original absolute file path hash
+   * - `$time`: file build timestamp
+   *
+   * @default "$name.$ext"
+   */
+  filename?: string;
+  type: "asset" | "module" | "keep";
+  content: Blob | NodeJS.TypedArray | ArrayBufferLike | string | Bun.BlobPart[];
+}
+
+export interface Loader {
+  handle(filePath: string, data: RequestData): Response | Promise<Response>;
+
+  /**
+   * @param filePath Absolute file location
+   */
+  build(filePath: string): BuildResult[] | Promise<BuildResult[]>;
+}
 
 export type LoaderInitiator = (
   bunsaiOpts: ResolvedBunSaiOptions

@@ -14,18 +14,29 @@ export default function getSassLoader(
 
     await cache.setup();
 
-    return async (filePath, { request }) => {
-      if (request.method != "GET") return new Response(null, { status: 405 });
+    return {
+      async handle(filePath, { request }) {
+        if (request.method != "GET") return new Response(null, { status: 405 });
 
-      const inCache = await cache.loadResponse(filePath, responseInit);
+        const inCache = await cache.loadResponse(filePath, responseInit);
 
-      if (inCache) return inCache;
+        if (inCache) return inCache;
 
-      const result = compile(filePath, options).css;
+        const result = compile(filePath, options).css;
 
-      await cache.write(filePath, result);
+        await cache.write(filePath, result);
 
-      return new Response(result, responseInit);
+        return new Response(result, responseInit);
+      },
+      build(filePath) {
+        const { css, sourceMap } = compile(filePath, options);
+        return [
+          {
+            content: css,
+            type: "asset",
+          },
+        ];
+      },
     };
   };
 }
