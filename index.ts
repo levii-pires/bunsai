@@ -7,25 +7,28 @@ import type {
   BunSaiMiddlewareRecord,
 } from "./types";
 import { extname } from "path";
-import * as Internals from "./internals";
+import MiddlewareChannel from "./internals/middlewareChannel";
+import { resolveOptions } from "./internals/options";
+import { getStatic } from "./internals/static";
+import { initLoaders } from "./internals/loaders";
+import { initMiddlewares } from "./internals/middlewares";
+import { LoaderNotFoundError } from "./internals/errors";
+import { build } from "./internals/build";
 
 export default class BunSai {
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
-  readonly routeLoaders: LoaderMap = {};
+  readonly loaders: LoaderMap = new Map();
   readonly options: ResolvedBunSaiOptions;
-  readonly middlewares =
-    Internals.MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>([
-      "notFound",
-      "request",
-      "response",
-      "error",
-    ]);
+  readonly middlewares = MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>(
+    ["notFound", "request", "response", "error", "end"]
+  );
+  protected $ready = Promise.withResolvers<void>();
 
   constructor(options: BunSaiOptions) {
-    this.options = Internals.resolveOptions(options);
+    this.options = resolveOptions(options);
 
     const fileExtensions = this.options.staticFiles.concat(
-      Object.keys(this.options.loaders) as Extname[]
+      this.options.loaders.map((l) => l.extensions).flat()
     );
 
     this.router = new Bun.FileSystemRouter({
@@ -34,13 +37,32 @@ export default class BunSai {
       fileExtensions,
     });
 
-    Internals.getStatic(this);
-    Internals.initLoaders(this);
-    Internals.initMiddlewares(this);
+    getStatic(this);
+    initLoaders(this);
+    initMiddlewares(this);
   }
 
-  protected $reloadRouter() {
-    this.router.reload();
+  protected async $build() {
+    // const options: BunSaiOptions = (
+    //   await import(join(process.cwd(), "bunsai.config.ts"))
+    // ).default;
+
+    // if (!options)
+    //   throw new Error("bunsai.config.ts must have a default export");
+
+    // const instance = await this.init(options);
+
+    await this.ready;
+
+    await build(this);
+  }
+
+  protected async $setup() {
+    for (const loader of this.options.loaders) {
+      await loader.setup(this.options);
+    }
+
+    this.$ready.resolve();
   }
 
   protected async $fetch(request: Request, server: Server) {
@@ -66,14 +88,17 @@ export default class BunSai {
         return nfMidResult || new Response(null, { status: 404 });
       }
 
-      const loader =
-        this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
+      const loader = this.loaders.get(
+        extname(route.filePath).toLowerCase() as Extname
+      );
 
-      if (!loader) throw new Internals.LoaderNotFoundError(request);
+      if (!loader) throw new LoaderNotFoundError(request);
 
-      const response = await (
-        await loader
-      )(route.filePath, { server, request, route });
+      const response = await loader.handle(route.filePath, {
+        server,
+        request,
+        route,
+      });
 
       const resResult = await this.middlewares.response.call(
         {
@@ -102,36 +127,39 @@ export default class BunSai {
     }
   }
 
-  /**
-   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
-   * @deprecated
-   */
-  addMiddleware(): never {
-    throw new Error(
-      "This method was removed on v0.2.0. Please use `middlewares` instead."
-    );
-  }
-
-  /**
-   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
-   * @deprecated
-   */
-  removeMiddleware(): never {
-    throw new Error(
-      "This method was removed on v0.2.0. Please use `middlewares` instead."
-    );
-  }
-
   get fetch() {
     const that = this;
 
-    return function (this: Server, request: Request) {
-      return that.$fetch(request, this);
+    return async function (this: Server, request: Request) {
+      const response = await that.$fetch(request, this);
+
+      const endRes = await that.middlewares.end.call(
+        { response, request, server: this },
+        that.options.dev
+      );
+
+      return endRes || response;
     };
   }
 
-  get reloadRouter() {
-    return this.$reloadRouter.bind(this);
+  get setup() {
+    return this.$setup.bind(this);
+  }
+
+  get ready() {
+    return this.$ready.promise;
+  }
+
+  static async init(...args: ConstructorParameters<typeof BunSai>) {
+    const instance = new this(...args);
+
+    await instance.setup();
+
+    return instance;
+  }
+
+  get build() {
+    return this.$build.bind(this);
   }
 }
 
