@@ -1,5 +1,5 @@
 import type { AllMiddlewares, BunSaiMiddlewareRecord } from "..";
-import type { Middleware } from "./middleware";
+import type Middleware from "./middleware";
 import type { MiddlewareRecord } from "./middlewareChannel";
 
 /**
@@ -16,7 +16,11 @@ export function inject<Host extends new (...args: any[]) => AllMiddlewares>(
   const instance = new this(...args);
 
   // @ts-ignore
-  middlewares[instance.runsOn].add(instance.name, instance.runner);
+  middlewares[instance.runsOn].add(
+    instance.name,
+    // @ts-ignore
+    (data) => instance.runner(data)
+  );
 
   return {
     instance: instance as InstanceType<Host>,

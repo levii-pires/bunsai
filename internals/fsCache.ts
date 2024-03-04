@@ -1,6 +1,6 @@
 import { RmOptions, watch } from "fs";
 import { mkdir, rm } from "fs/promises";
-import { join, basename } from "path";
+import { join, basename, parse } from "path";
 
 type WriteInput =
   | string
@@ -14,7 +14,7 @@ const rootFolder = process.env.CACHE_FOLDER || "./.cache";
 if (process.env.PRESERVE_CACHE != "true")
   await rm(rootFolder, { force: true, recursive: true });
 
-export class FSCache {
+export default class FSCache {
   dir: string;
 
   /**
@@ -23,7 +23,7 @@ export class FSCache {
    * any re-render logic that relies on `FSCache#file(...).exists()`
    */
   constructor(
-    public type: "loader" | "middleware",
+    public type: "loader" | "middleware" | "build",
     public name: string,
     public dev?: boolean
   ) {
@@ -31,7 +31,8 @@ export class FSCache {
   }
 
   private getCachePath(filename: string) {
-    return join(this.dir, basename(filename));
+    const { dir, root, base } = parse(filename);
+    return join(this.dir, dir.replace(root, ""), base);
   }
 
   /**
@@ -112,5 +113,13 @@ export class FSCache {
     const cachePath = this.getCachePath(filename);
 
     return rm(cachePath, { ...options, force: true });
+  }
+
+  static async init(...args: ConstructorParameters<typeof FSCache>) {
+    const instance = new this(...args);
+
+    await instance.setup();
+
+    return instance;
   }
 }

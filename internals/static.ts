@@ -1,17 +1,13 @@
 import type BunSai from "..";
-import { StaticLoaderInit } from "../loaders";
+import StaticLoader from "../loaders/static";
 
 /**
  * This function is used by BunSai's constructor to resolve the `staticFiles` option.
  */
 export function getStatic(bunsai: BunSai) {
-  const { options, routeLoaders } = bunsai;
+  const { options } = bunsai;
 
   if (options.staticFiles.length == 0) return;
 
-  const loader = StaticLoaderInit(options);
-
-  for (const file of options.staticFiles) {
-    routeLoaders[file] = loader;
-  }
+  options.loaders.unshift(new StaticLoader(options.staticFiles));
 }

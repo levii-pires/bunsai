@@ -6,7 +6,7 @@ export type MiddlewareRecord<MiddlewareMap extends Record<string, any>> = {
 
 const Middlewares = Symbol("MiddlewareChannel.middlewares");
 
-export class MiddlewareChannel<Data> {
+export default class MiddlewareChannel<Data> {
   [Middlewares]: Map<string, MiddlewareRunner<Data>> = new Map();
 
   /**

@@ -5,7 +5,7 @@ export function initMiddlewares(bunsai: BunSai) {
     bunsai.middlewares[middleware.runsOn].add(
       middleware.name,
       // @ts-ignore
-      middleware.runner
+      (data) => middleware.runner(data)
     );
   }
 }
