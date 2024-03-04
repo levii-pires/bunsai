@@ -3,7 +3,8 @@ import type {
   BunSaiMiddlewareRecord,
   MiddlewareRunnerWithThis,
 } from "../types";
-import { Middleware, MiddlewareRecord } from "../internals";
+import type { MiddlewareRecord } from "../internals/middlewareChannel";
+import Middleware from "../internals/middleware";
 
 export interface CORSOptions {
   /**
@@ -129,7 +130,7 @@ export class CORSPreflight extends Middleware<"request"> {
     super();
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
+  runner: MiddlewareRunnerWithThis<
     {
       request: Request;
       server: Server;
@@ -173,7 +174,7 @@ export class CORSResponse extends Middleware<"response"> {
     super();
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
+  runner: MiddlewareRunnerWithThis<
     {
       response: Response;
       request: Request;

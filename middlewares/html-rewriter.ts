@@ -1,6 +1,6 @@
 import type { MiddlewareRunnerWithThis } from "../types";
 import type { Server, MatchedRoute } from "bun";
-import { Middleware } from "../internals/middleware";
+import Middleware from "../internals/middleware";
 
 export default class Rewriter extends Middleware<"response"> {
   name = "@builtin.html-rewriter";
@@ -10,7 +10,7 @@ export default class Rewriter extends Middleware<"response"> {
     super();
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
+  runner: MiddlewareRunnerWithThis<
     {
       response: Response;
       request: Request;
