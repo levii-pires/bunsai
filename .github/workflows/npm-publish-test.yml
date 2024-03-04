@@ -15,7 +15,5 @@ jobs:
           bun-version: latest
       - run: "bun install"
       - run: "bun link"
-      - run: "cd tests"
-      - run: "bun install"
-      - run: "bun test"
-      - run: "cd .."
+      - run: "bun install && bun test"
+        working-directory: "./tests"
