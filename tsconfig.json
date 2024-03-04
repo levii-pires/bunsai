@@ -9,6 +9,7 @@
     "isolatedModules": true,
     "sourceMap": true,
     "noEmit": true,
-    "types": ["@types/bun"]
+    "types": ["@types/bun"],
+    "resolveJsonModule": true
   }
 }
