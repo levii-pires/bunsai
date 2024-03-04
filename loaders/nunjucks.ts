@@ -1,70 +1,61 @@
-import type { LoaderInitiator } from "../types";
+import type { BuildResult, RequestData, ResolvedBunSaiOptions } from "../types";
 import { relative, resolve } from "path";
-import {
-  configure,
-  precompile,
-  type ConfigureOptions,
-  type Environment,
-} from "nunjucks";
-
-export interface NunjucksLoader {
-  /**
-   * Undefined before loader initiation
-   */
-  readonly env: Environment | undefined;
-  loaderInit: LoaderInitiator;
-}
+import { configure, type ConfigureOptions, type Environment } from "nunjucks";
+import Loader from "../internals/loader";
 
 // Nunjucks has already a cache system. Not implementing FSCache here.
-export default function getNunjucksLoader(
-  options?: ConfigureOptions
-): NunjucksLoader {
-  let env: Environment;
 
-  return {
-    get env() {
-      return env;
-    },
+export default class NunjucksLoader extends Loader {
+  extensions = [".njk"] as const;
 
-    loaderInit: (opts) => {
-      env = configure(opts.dir, options);
+  /**
+   * null before setup
+   */
+  env: Environment | null = null;
+  rootPath = "";
 
-      const rootPath = resolve(opts.dir);
+  constructor(public options?: ConfigureOptions) {
+    super();
+  }
 
-      return {
-        handle(filePath, data) {
-          if (data.request.method != "GET")
-            return new Response(null, { status: 405 });
+  setup(opts: ResolvedBunSaiOptions) {
+    this.env = configure(opts.dir, this.options);
+    this.rootPath = resolve(opts.dir);
+    return super.setup(opts);
+  }
 
-          const { promise, reject, resolve } =
-            Promise.withResolvers<Response>();
+  handle(filePath: string, data: RequestData) {
+    if (!this.env) throw new Error("null env; run setup first");
 
-          env
-            .getTemplate(relative(rootPath, filePath))
-            .render(data, (err, result) => {
-              if (err) {
-                reject(err);
-                return;
-              }
+    if (data.request.method != "GET")
+      return new Response(null, { status: 405 });
 
-              resolve(
-                new Response(result, {
-                  headers: { "Content-Type": "text/html; charset=utf-8" },
-                })
-              );
-            });
+    const { promise, reject, resolve } = Promise.withResolvers<Response>();
 
-          return promise;
-        },
-        build(filePath) {
-          return [
-            {
-              content: Bun.file(filePath),
-              type: "keep",
-            },
-          ];
-        },
-      };
-    },
-  };
+    this.env
+      .getTemplate(relative(this.rootPath, filePath))
+      .render(data, (err, result) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(
+          new Response(result, {
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          })
+        );
+      });
+
+    return promise;
+  }
+
+  build(filePath: string): BuildResult[] {
+    return [
+      {
+        content: Bun.file(filePath),
+        serve: "loader",
+      },
+    ];
+  }
 }

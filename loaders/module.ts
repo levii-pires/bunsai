@@ -1,5 +1,11 @@
-import { FSCache } from "../internals";
-import type { Module, LoaderInitiator } from "../types";
+import type {
+  Module,
+  ResolvedBunSaiOptions,
+  RequestData,
+  BuildResult,
+} from "../types";
+import FSCache from "../internals/fsCache";
+import Loader from "../internals/loader";
 
 function responseInit(
   headers: Record<string, string> | undefined
@@ -9,59 +15,62 @@ function responseInit(
   };
 }
 
-const ModuleLoaderInit: LoaderInitiator = async ({ dev }) => {
-  const cache = new FSCache("loader", "module", dev);
+export default class ModuleLoader extends Loader {
+  extensions = [".ts", ".tsx"] as const;
+  cache: FSCache | null = null;
+  dev = false;
 
-  await cache.setup();
+  async setup(opts: ResolvedBunSaiOptions) {
+    this.cache = await FSCache.init("loader", "module", opts.dev);
+    this.dev = opts.dev;
+    return super.setup(opts);
+  }
 
-  return {
-    async handle(filePath, data) {
-      const { handler, headers, invalidate } = (await import(
-        filePath
-      )) as Module;
+  async handle(filePath: string, data: RequestData) {
+    if (!this.cache) throw new Error("null cache; run setup first");
 
-      if (typeof handler != "function")
-        throw new Error(
-          `${filePath}: Should have an export named "handler" of type "function"`
-        );
+    const { handler, headers, invalidate } = (await import(filePath)) as Module;
 
-      const shouldCache = typeof invalidate == "function" && !dev;
+    if (typeof handler != "function")
+      throw new Error(
+        `${filePath}: Should have an export named "handler" of type "function"`
+      );
 
-      if (shouldCache) {
-        if (invalidate(data)) {
-          await cache.invalidate(filePath);
-        } else {
-          const inCache = await cache.loadResponse(
-            filePath,
-            responseInit(headers)
-          );
+    const shouldCache = typeof invalidate == "function" && !this.dev;
 
-          if (inCache) return inCache;
-        }
-      }
-
-      const result = await handler(data);
-
-      if (shouldCache) {
-        await cache.write(
+    if (shouldCache) {
+      if (invalidate(data)) {
+        await this.cache.invalidate(filePath);
+      } else {
+        const inCache = await this.cache.loadResponse(
           filePath,
-          result instanceof Response ? await result.arrayBuffer() : result
+          responseInit(headers)
         );
+
+        if (inCache) return inCache;
       }
+    }
 
-      if (result instanceof Response) return result;
+    const result = await handler(data);
 
-      return new Response(result, responseInit(headers));
-    },
-    build(filePath) {
-      return [
-        {
-          type: "module",
-          content: Bun.file(filePath),
-        },
-      ];
-    },
-  };
-};
+    if (shouldCache) {
+      await this.cache.write(
+        filePath,
+        result instanceof Response ? await result.arrayBuffer() : result
+      );
+    }
 
-export default ModuleLoaderInit;
+    if (result instanceof Response) return result;
+
+    return new Response(result, responseInit(headers));
+  }
+
+  build(filePath: string): BuildResult[] {
+    return [
+      {
+        serve: "module",
+        content: Bun.file(filePath),
+      },
+    ];
+  }
+}

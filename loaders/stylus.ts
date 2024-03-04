@@ -1,43 +1,80 @@
+import type { BuildResult, RequestData, ResolvedBunSaiOptions } from "../types";
+import type FilenameParser from "../internals/filename";
 import stylus from "stylus";
-import type { LoaderInitiator } from "../types";
-import { FSCache } from "../internals";
+import FSCache from "../internals/fsCache";
+import Loader from "../internals/loader";
 
 const responseInit = {
   headers: { "Content-Type": "text/css; charset=utf-8" },
 };
 
-export default function getStylusLoader(
-  options: Omit<stylus.RenderOptions, "filename"> = {}
-): LoaderInitiator {
-  return async ({ dev }) => {
-    const cache = new FSCache("loader", "stylus", dev);
+export default class StylusLoader extends Loader {
+  extensions = [".styl"] as const;
+  cache: FSCache | null = null;
+  dev = false;
 
-    await cache.setup();
+  constructor(public options: Omit<stylus.RenderOptions, "filename"> = {}) {
+    super();
+  }
 
-    return async (filePath, { request }) => {
-      if (request.method != "GET") return new Response(null, { status: 405 });
+  async setup(opts: ResolvedBunSaiOptions) {
+    this.cache = await FSCache.init("loader", "stylus", opts.dev);
+    this.dev = opts.dev;
+    return super.setup(opts);
+  }
 
-      const inCache = await cache.loadResponse(filePath, responseInit);
+  async handle(filePath: string, { request }: RequestData) {
+    if (!this.cache) throw new Error("null cache; run setup first");
 
-      if (inCache) return inCache;
+    if (request.method != "GET") return new Response(null, { status: 405 });
 
-      const { promise, reject, resolve } = Promise.withResolvers<Response>();
+    const inCache = await this.cache.loadResponse(filePath, responseInit);
 
-      stylus(await Bun.file(filePath).text(), options)
-        .set("filename", filePath)
-        .set("compress", !dev)
-        .render(async (err, css) => {
-          if (err) {
-            reject(err);
-            return;
-          }
+    if (inCache) return inCache;
 
-          await cache.write(filePath, css);
+    const { promise, reject, resolve } = Promise.withResolvers<Response>();
 
-          resolve(new Response(css, responseInit));
-        });
+    stylus(await Bun.file(filePath).text(), this.options)
+      .set("filename", filePath)
+      .set("compress", !this.dev)
+      .render(async (err, css) => {
+        if (err) {
+          reject(err);
+          return;
+        }
 
-      return promise;
-    };
-  };
+        await this.cache!.write(filePath, css);
+
+        resolve(new Response(css, responseInit));
+      });
+
+    return promise;
+  }
+
+  async build(
+    filePath: string,
+    filenameParser: FilenameParser
+  ): Promise<BuildResult[]> {
+    const { promise, reject, resolve } = Promise.withResolvers<string>();
+
+    stylus(await Bun.file(filePath).text(), this.options)
+      .set("filename", filePath)
+      .set("compress", true)
+      .render(async (err, css) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(css);
+      });
+
+    return [
+      {
+        content: await promise,
+        serve: "static",
+        filename: filenameParser.parse("$name.css"),
+      },
+    ];
+  }
 }

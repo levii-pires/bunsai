@@ -1,42 +1,51 @@
-import { FSCache } from "../internals";
-import type { LoaderInitiator } from "../types";
+import type { BuildResult, RequestData, ResolvedBunSaiOptions } from "../types";
+import type FilenameParser from "../internals/filename";
+import FSCache from "../internals/fsCache";
 import { compile, Options } from "sass";
+import Loader from "../internals/loader";
 
 const responseInit = {
   headers: { "Content-Type": "text/css; charset=utf-8" },
 };
 
-export default function getSassLoader(
-  options?: Options<"sync">
-): LoaderInitiator {
-  return async ({ dev }) => {
-    const cache = new FSCache("loader", "sass", dev);
+export default class SassLoader extends Loader {
+  extensions = [".scss"] as const;
+  cache: FSCache | null = null;
 
-    await cache.setup();
+  constructor(public options?: Options<"sync">) {
+    super();
+  }
 
-    return {
-      async handle(filePath, { request }) {
-        if (request.method != "GET") return new Response(null, { status: 405 });
+  async setup(opts: ResolvedBunSaiOptions) {
+    this.cache = await FSCache.init("loader", "sass", opts.dev);
+    return super.setup(opts);
+  }
 
-        const inCache = await cache.loadResponse(filePath, responseInit);
+  async handle(filePath: string, { request }: RequestData) {
+    if (!this.cache) throw new Error("null cache; run setup first");
 
-        if (inCache) return inCache;
+    if (request.method != "GET") return new Response(null, { status: 405 });
 
-        const result = compile(filePath, options).css;
+    const inCache = await this.cache.loadResponse(filePath, responseInit);
 
-        await cache.write(filePath, result);
+    if (inCache) return inCache;
 
-        return new Response(result, responseInit);
+    const { css } = compile(filePath, this.options);
+
+    await this.cache.write(filePath, css);
+
+    return new Response(css, responseInit);
+  }
+
+  build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
+    const { css } = compile(filePath, this.options);
+
+    return [
+      {
+        content: css,
+        serve: "static",
+        filename: filenameParser.parse("$name.css"),
       },
-      build(filePath) {
-        const { css, sourceMap } = compile(filePath, options);
-        return [
-          {
-            content: css,
-            type: "asset",
-          },
-        ];
-      },
-    };
-  };
+    ];
+  }
 }
