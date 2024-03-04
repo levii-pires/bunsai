@@ -1,6 +1,6 @@
 on:
   push:
-    branches: main
+    branches: test
 
 jobs:
   publish:
@@ -19,6 +19,3 @@ jobs:
       - run: "bun install"
       - run: "bun test"
       - run: "cd .."
-      - uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
