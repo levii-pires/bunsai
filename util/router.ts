@@ -1,6 +1,5 @@
-import { MiddlewareChannel } from "../internals";
-import type { MatchedRoute } from "bun";
 import type { MiddlewareResult, ModuleData, ModuleHandler } from "../types";
+import MiddlewareChannel from "../internals/middlewareChannel";
 
 type Methods = typeof methods extends readonly (infer T)[] ? T : never;
 
