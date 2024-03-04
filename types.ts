@@ -1,38 +1,23 @@
-import type { BunFile, MatchedRoute, Server } from "bun";
+import type { BuildConfig, BunFile, MatchedRoute, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
 import type { CORSOptions } from "./middlewares/cors";
+import type Loader from "./internals/loader";
+import type BunSai from ".";
 
 export interface BuildResult {
   /**
-   * How BunSai should name the file
-   *
-   * Special characters:
-   * - `$name`: original file name
-   * - `$ext` : original file extension
-   * - `$hash`: original absolute file path hash
-   * - `$time`: file build timestamp
-   *
-   * @default "$name.$ext"
+   * @default parseFilename("$name$ext")
    */
   filename?: string;
-  type: "asset" | "module" | "keep";
+  serve: "module" | "bundle" | "static" | "loader";
+  bundleConfig?: Omit<
+    BuildConfig,
+    "entrypoints" | "target" | "splitting" | "minify"
+  >;
   content: Blob | NodeJS.TypedArray | ArrayBufferLike | string | Bun.BlobPart[];
 }
-
-export interface Loader {
-  handle(filePath: string, data: RequestData): Response | Promise<Response>;
-
-  /**
-   * @param filePath Absolute file location
-   */
-  build(filePath: string): BuildResult[] | Promise<BuildResult[]>;
-}
-
-export type LoaderInitiator = (
-  bunsaiOpts: ResolvedBunSaiOptions
-) => Loader | Promise<Loader>;
 
 export type ModuleContent =
   | BunFile
@@ -72,9 +57,7 @@ export interface Module {
 
 export type Extname = `.${Lowercase<string>}`;
 
-export type LoaderMap = Record<Extname, Loader | Promise<Loader>>;
-
-export type LoaderInitMap = Record<Extname, LoaderInitiator>;
+export type LoaderMap = Map<Extname, Loader>;
 
 export interface BunSaiOptions {
   /**
@@ -96,19 +79,13 @@ export interface BunSaiOptions {
    */
   dev?: boolean;
   /**
-   * @default {}
-   * 
-   * 
+   * @default []
+   *
+   *
    * @example
-   * loaders: {
-    ".njk": nunjucksLoaderInit,
-    ".ts": apiLoaderInit,
-    ".tsx": reactLoaderInit,
-    ".svelte": svelteLoaderInit,
-    ".vue": vueLoaderInit,
-    }
+   * loaders: [new NunjucksLoader(), new SassLoader()]
    */
-  loaders?: LoaderInitMap;
+  loaders?: Loader[];
   /**
    * @default []
    *
@@ -126,10 +103,9 @@ export interface BunSaiOptions {
 export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
 
 export interface RecommendedOpts {
-  nunjucks?: {
-    options?: ConfigureOptions;
-  };
-  sass?: { options?: Options<"sync"> };
+  bunsai?: Omit<BunSaiOptions, "loaders" | "staticFiles" | "middlewares">;
+  nunjucks?: ConfigureOptions;
+  sass?: Options<"sync">;
   middlewares?: {
     ddos?: DDOSOptions;
     cors?: CORSOptions;
@@ -137,62 +113,46 @@ export interface RecommendedOpts {
 }
 
 /**
- * Recommended loaders and static files
- */
-export interface Recommended {
-  /**
-     * @default
-     *  {
-     *      ".ts": Loader;
-     *      ".tsx": Loader;
-            ".njk": Loader;
-            ".scss": Loader;
-        }
-     */
-  loaders: LoaderInitMap;
-  /**
-     * @default
-     // web formats
-      ".html",
-      ".css",
-      ".js",
-      ".json",
-      ".txt",
+ * Create BunSai instance with recommended loaders and static files.
+ * 
+ * Loaders:
+ * - ModuleLoader
+ * - NunjucksLoader
+ * - SassLoader
+ * 
+ * Static files:
+ *  
+ * // web formats
+      - ".html",
+      - ".css",
+      - ".js",
+      - ".json",
+      - ".txt",
 
       // media formats
-      ".webp",
-      ".gif",
-      ".mp4",
-      ".mov",
-      ".ogg",
-      ".mp3",
-      ".aac",
+      - ".webp",
+      - ".gif",
+      - ".mp4",
+      - ".mov",
+      - ".ogg",
+      - ".mp3",
+      - ".aac",
+      - ".ico",
 
       // font formats
-      ".ttf",
-      ".otf",
-      ".woff",
-      ".woff2",
-     */
-  staticFiles: Extname[];
-
-  middlewares: AllMiddlewares[];
-
-  /**
-   * Undefined before loader initiation.
-   *
-   * This property is deprecated and will be removed on v1.
-   * Use {@link nunjucks} instead.
-   *
-   * @deprecated
-   */
-  readonly nunjucksEnv: Environment | undefined;
+      - ".ttf",
+      - ".otf",
+      - ".woff",
+      - ".woff2",
+ */
+export interface Recommended {
+  bunsai: BunSai;
 
   nunjucks: {
     /**
-     * Undefined before loader initiation.
+     * null before loader initiation.
      */
-    env(): Environment | undefined;
+    env(): Environment | null;
   };
 }
 
@@ -224,6 +184,11 @@ export interface BunSaiMiddlewareRecord {
     request: Request;
     server: Server;
     route: MatchedRoute;
+  };
+  end: {
+    response: Response;
+    request: Request;
+    server: Server;
   };
   request: {
     request: Request;
