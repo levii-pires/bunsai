@@ -12,10 +12,6 @@ export interface BuildResult {
    */
   filename?: string;
   serve: "module" | "bundle" | "static" | "loader";
-  bundleConfig?: Omit<
-    BuildConfig,
-    "entrypoints" | "target" | "splitting" | "minify"
-  >;
   content: Blob | NodeJS.TypedArray | ArrayBufferLike | string | Bun.BlobPart[];
 }
 
