@@ -7,9 +7,7 @@ const responseInit = {
   headers: { "Content-Type": "text/javascript; charset=utf-8" },
 };
 
-const bundleConfig = {
-  loader: { ".wts": "ts", ".wtsx": "tsx" },
-} as const;
+const loader = { ".wts": "ts", ".wtsx": "tsx" } as const;
 
 export default class WebLoader extends Loader {
   extensions = [".wts", ".wtsx"] as const;
@@ -25,6 +23,9 @@ export default class WebLoader extends Loader {
   async handle(filePath: string, data: RequestData) {
     if (!this.cache) throw new Error("null cache; run setup first");
 
+    if (data.request.method != "GET")
+      return new Response(null, { status: 405 });
+
     const inCache = await this.cache.loadResponse(filePath, responseInit);
 
     if (inCache) return inCache;
@@ -34,9 +35,9 @@ export default class WebLoader extends Loader {
       outputs: [out],
       success,
     } = await Bun.build({
+      loader,
       entrypoints: [filePath],
       target: "browser",
-      ...bundleConfig,
     });
 
     logs.forEach((l) => console.log(l));
@@ -53,7 +54,6 @@ export default class WebLoader extends Loader {
     return [
       {
         serve: "bundle",
-        bundleConfig,
         content: Bun.file(filePath),
         filename: filenameParser.parse("$name.ts"),
       },
