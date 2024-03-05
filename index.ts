@@ -43,17 +43,7 @@ export default class BunSai {
   }
 
   protected async $build() {
-    // const options: BunSaiOptions = (
-    //   await import(join(process.cwd(), "bunsai.config.ts"))
-    // ).default;
-
-    // if (!options)
-    //   throw new Error("bunsai.config.ts must have a default export");
-
-    // const instance = await this.init(options);
-
-    await this.ready;
-
+    await this.$ready.promise;
     await build(this);
   }
 
@@ -150,16 +140,19 @@ export default class BunSai {
     return this.$ready.promise;
   }
 
-  static async init(...args: ConstructorParameters<typeof BunSai>) {
-    const instance = new this(...args);
+  get build() {
+    return this.$build.bind(this);
+  }
 
-    await instance.setup();
-
+  static async init(options: BunSaiOptions) {
+    const instance = new this(options);
+    await instance.$setup();
     return instance;
   }
 
-  get build() {
-    return this.$build.bind(this);
+  static async build(options: BunSaiOptions) {
+    const instance = await this.init(options);
+    await instance.$build();
   }
 }
 
