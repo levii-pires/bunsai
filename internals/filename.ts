@@ -13,17 +13,17 @@ export default class FilenameParser {
 
   /**
    * Parse filename to provide a custom filename. Special characters:
-   * - `$name`: original file name
-   * - `$ext` : original file extension
-   * - `$hash`: original absolute file path hash
-   * - `$time`: FilenameParser instance creation timestamp
+   * - `[name]`: original file name
+   * - `[ext]` : original file extension
+   * - `[hash]`: original absolute file path hash
+   * - `[time]`: FilenameParser instance creation timestamp
    */
   parse(filename: string) {
     return filename
-      .replaceAll("$name", this.path.name)
-      .replaceAll("$ext", this.path.ext)
-      .replaceAll("$hash", this.hash)
-      .replaceAll("$time", this.time);
+      .replaceAll("[name]", this.path.name)
+      .replaceAll("[ext]", this.path.ext)
+      .replaceAll("[hash]", this.hash)
+      .replaceAll("[time]", this.time);
   }
 
   /**
