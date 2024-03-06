@@ -1,4 +1,5 @@
 import type { BuildResult, RequestData, ResolvedBunSaiOptions } from "../types";
+import type FilenameParser from "../internals/filename";
 import { relative, resolve } from "path";
 import { configure, type ConfigureOptions, type Environment } from "nunjucks";
 import Loader from "../internals/loader";
@@ -50,8 +51,9 @@ export default class NunjucksLoader extends Loader {
     return promise;
   }
 
-  build(filePath: string): BuildResult[] {
+  build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
     return [
+      { serve: "static" },
       {
         content: Bun.file(filePath),
         serve: "loader",
