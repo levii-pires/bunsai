@@ -106,7 +106,7 @@ export async function build(bunsai: BunSai) {
   ).filter((str) => !!str); // remove duplicated extensions and empty strings
 
   await Bun.write(
-    join(outputFolder, "manifest.json"),
+    join(outputFolder, ".bunsai-manifest.json"),
     JSON.stringify(buildManifest)
   );
 
