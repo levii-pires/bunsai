@@ -1,5 +1,4 @@
 import { Router } from "bunsai/util";
-import type { Module } from "bunsai/types";
 
 const router = new Router()
   .get("/router-method", ({ response }) =>

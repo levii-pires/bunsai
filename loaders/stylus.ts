@@ -72,8 +72,8 @@ export default class StylusLoader extends Loader {
     return [
       {
         content: await promise,
-        type: "static",
-        filename: filenameParser.parse("$name.css"),
+        type: "asset",
+        filename: filenameParser.parse("[name].css"),
       },
     ];
   }

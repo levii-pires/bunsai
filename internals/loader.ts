@@ -4,6 +4,7 @@ import type {
   RequestData,
   ResolvedBunSaiOptions,
 } from "../types";
+import type FilenameParser from "./filename";
 
 export default abstract class Loader {
   /**
@@ -12,9 +13,7 @@ export default abstract class Loader {
    */
   abstract extensions: readonly Extname[];
 
-  async setup(opts: ResolvedBunSaiOptions) {
-    return this;
-  }
+  setup(opts: ResolvedBunSaiOptions): Promise<void> | void {}
 
   abstract handle(
     filePath: string,
@@ -24,5 +23,8 @@ export default abstract class Loader {
   /**
    * @param filePath Absolute file location
    */
-  abstract build(filePath: string): BuildResult[] | Promise<BuildResult[]>;
+  abstract build(
+    filePath: string,
+    filenameParser: FilenameParser
+  ): BuildResult[] | Promise<BuildResult[]>;
 }

@@ -4,6 +4,7 @@ import type {
   RequestData,
   BuildResult,
 } from "../types";
+import type FilenameParser from "../internals/filename";
 import FSCache from "../internals/fsCache";
 import Loader from "../internals/loader";
 
@@ -23,7 +24,6 @@ export default class ModuleLoader extends Loader {
   async setup(opts: ResolvedBunSaiOptions) {
     this.cache = await FSCache.init("loader", "module", opts.dev);
     this.dev = opts.dev;
-    return super.setup(opts);
   }
 
   async handle(filePath: string, data: RequestData) {
@@ -66,9 +66,10 @@ export default class ModuleLoader extends Loader {
     return new Response(result, responseInit(headers));
   }
 
-  build(filePath: string): BuildResult[] {
+  build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
     return [
       {
+        filename: filenameParser.parse("[name][ext]"),
         type: "server",
         content: Bun.file(filePath),
       },

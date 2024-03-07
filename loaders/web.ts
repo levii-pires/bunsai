@@ -53,9 +53,9 @@ export default class WebLoader extends Loader {
   build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
     return [
       {
-        type: "bundle",
+        type: "browser",
         content: Bun.file(filePath),
-        filename: filenameParser.parse("$name.ts"),
+        filename: filenameParser.parse("[name].ts"),
       },
     ];
   }

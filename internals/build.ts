@@ -1,29 +1,31 @@
-import type { Extname } from "../types";
+import type { BuildManifest, Extname } from "../types";
 import type BunSai from "..";
-import { dirname, extname, relative, resolve } from "path";
+import { dirname, extname, relative, resolve, join } from "path";
 import FSCache from "./fsCache";
 import FilenameParser from "./filename";
 import { rm } from "fs/promises";
-
-const buildFolder = "bunsai-build";
+import { outputFolder } from "../globals";
+import { parseAsync } from "dree";
 
 export async function build(bunsai: BunSai) {
-  console.time("BunSai build");
+  console.time("BunSai build time");
 
-  console.log("Clearing build folder");
+  console.log("Clearing build folder...");
 
-  await rm(buildFolder, { force: true, recursive: true });
+  await rm(outputFolder, { force: true, recursive: true });
 
   console.log("Done\n");
 
   const files = Object.values(bunsai.router.routes);
 
-  const bundleEntries: string[] = [];
-  const moduleEntries: string[] = [];
+  const browserEntries: string[] = [];
+  const serverEntries: string[] = [];
 
   const cache = await FSCache.init("build", "@bunsai");
 
-  console.log("Building files:");
+  console.log("Building files...");
+
+  const buildManifest: BuildManifest = { extensions: [], files: {} };
 
   for (const file of files) {
     const ext = extname(file).toLowerCase();
@@ -39,61 +41,78 @@ export async function build(bunsai: BunSai) {
     const result = await loader.build(file, parser);
 
     for (const res of result) {
-      const fln = res.filename || parser.parse("$name$ext");
-
-      const outPath = resolve(buildFolder, relativeOut, fln);
+      const outPath = resolve(outputFolder, relativeOut, res.filename);
 
       switch (res.type) {
-        case "bundle": {
-          bundleEntries.push(await cache.write(outPath, res.content));
+        case "browser": {
+          browserEntries.push(await cache.write(outPath, res.content));
           break;
         }
-        case "module": {
-          moduleEntries.push(await cache.write(outPath, res.content));
+        case "server": {
+          serverEntries.push(await cache.write(outPath, res.content));
           break;
         }
         default: {
           await Bun.write(outPath, res.content);
-          console.log("\t", outPath);
+          buildManifest.files[outPath] = "asset";
+          buildManifest.extensions.push(extname(outPath));
           break;
         }
       }
     }
   }
 
-  if (bundleEntries.length > 0) {
+  if (browserEntries.length > 0) {
     const { logs, outputs } = await Bun.build({
-      entrypoints: bundleEntries,
+      entrypoints: browserEntries,
       splitting: true,
       target: "browser",
-      outdir: buildFolder,
+      outdir: outputFolder,
       minify: true,
     });
 
     logs.forEach((l) => console.log(l));
+
     for (const out of outputs) {
-      const outPath = resolve(buildFolder, out.path);
-      console.log("\t", outPath);
+      if (out.kind == "entry-point") {
+        buildManifest.files[resolve(outputFolder, out.path)] = "browser";
+        buildManifest.extensions.push(extname(out.path));
+      }
     }
   }
 
-  if (moduleEntries.length > 0) {
+  if (serverEntries.length > 0) {
     const { logs, outputs } = await Bun.build({
-      entrypoints: moduleEntries,
+      entrypoints: serverEntries,
       splitting: true,
       target: "bun",
-      outdir: buildFolder,
+      outdir: outputFolder,
+      minify: true,
       naming: { chunk: ".module-[name]-[hash].[ext]" },
     });
 
     logs.forEach((l) => console.log(l));
 
     for (const out of outputs) {
-      const outPath = resolve(buildFolder, out.path);
-      console.log("\t", outPath);
+      if (out.kind == "entry-point") {
+        buildManifest.files[resolve(outputFolder, out.path)] = "server";
+        buildManifest.extensions.push(extname(out.path));
+      }
     }
   }
 
+  buildManifest.extensions = Array.from(
+    new Set(buildManifest.extensions)
+  ).filter((str) => !!str); // remove duplicated extensions and empty strings
+
+  await Bun.write(
+    join(outputFolder, "manifest.json"),
+    JSON.stringify(buildManifest)
+  );
+
   console.log();
-  console.timeEnd("BunSai build");
+  console.timeEnd("BunSai build time");
+  console.log();
+
+  console.log(await parseAsync(outputFolder));
 }

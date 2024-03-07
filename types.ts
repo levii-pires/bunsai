@@ -1,4 +1,4 @@
-import type { BunFile, BunPlugin, MatchedRoute, Server } from "bun";
+import type { BunFile, BunPlugin, MatchedRoute, Serve, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
@@ -8,13 +8,9 @@ import type BunSai from ".";
 
 export interface BuildResult {
   /**
-   * Provide a custom filename. Special characters:
-   * - `[name]`: original file name
-   * - `[ext]` : original file extension
-   * - `[hash]`: original absolute file path hash
-   * - `[time]`: FilenameParser instance creation timestamp
+   * Output filename
    */
-  filename?: string;
+  filename: string;
   /**
    * {@link content} type:
    * - `server`: must be a {@link Module} compliant JS/TS code
@@ -123,6 +119,7 @@ export interface RecommendedOpts {
  * - ModuleLoader
  * - NunjucksLoader
  * - SassLoader
+ * - WebLoader
  * 
  * Static files:
  *  
@@ -207,6 +204,20 @@ export interface BunSaiMiddlewareRecord {
     server: Server;
     error: unknown;
   };
+}
+
+export interface BuildManifest {
+  files: Record<string, BuildResult["type"]>;
+  extensions: string[];
+}
+
+export interface UserConfig extends RecommendedOpts {
+  /**
+   * @default "./bunsai-build"
+   */
+  output?: string;
+
+  serveOptions?: Omit<Serve<any>, "fetch">;
 }
 
 export {};

@@ -4,8 +4,46 @@ import { relative, resolve } from "path";
 import { configure, type ConfigureOptions, type Environment } from "nunjucks";
 import Loader from "../internals/loader";
 
-// Nunjucks has already a cache system. Not implementing FSCache here.
+const njkFilename = ".[name]-content";
 
+const module = `
+  import { configure } from "nunjucks";
+  import { relative } from "path";
+  import { outputFolder, userConfig } from "bunsai/globals";
+  import FilenameParser from "bunsai/internals/filename";
+
+  const env = (global.NunjucksEnv ||= configure(outputFolder, userConfig?.nunjucks)); 
+
+  export default {
+    handler(data){
+      if (data.request.method != "GET")
+        return new Response(null, { status: 405 });
+
+      const { promise, reject, resolve } = Promise.withResolvers();
+
+      const parser = new FilenameParser(data.route.filePath);
+
+      env
+        .getTemplate(relative(outputFolder, parser.replace("${njkFilename}")))
+        .render(data, (err, result) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          resolve(
+            new Response(result, {
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            })
+          );
+        });
+
+      return promise;
+    }
+  }
+  `;
+
+// Nunjucks has already a cache system. Not implementing FSCache here.
 export default class NunjucksLoader extends Loader {
   extensions = [".njk"] as const;
 
@@ -22,7 +60,6 @@ export default class NunjucksLoader extends Loader {
   setup(opts: ResolvedBunSaiOptions) {
     this.env = configure(opts.dir, this.options);
     this.rootPath = resolve(opts.dir);
-    return super.setup(opts);
   }
 
   handle(filePath: string, data: RequestData) {
@@ -52,11 +89,18 @@ export default class NunjucksLoader extends Loader {
   }
 
   build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
+    const dataFilename = filenameParser.parse(njkFilename);
+
     return [
-      { type: "static" },
       {
+        filename: dataFilename,
         content: Bun.file(filePath),
-        type: "loader",
+        type: "asset",
+      },
+      {
+        filename: filenameParser.parse("[name].mjs"),
+        content: module,
+        type: "server",
       },
     ];
   }

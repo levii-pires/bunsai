@@ -1,7 +1,6 @@
 import { Router } from "bunsai/util";
-import type { Module } from "bunsai/types";
 
-const router = new Router()
+export default new Router()
   .get("/router-method", ({ response }) =>
     response(new Response(null, { status: 204 }))
   )
@@ -14,10 +13,5 @@ const router = new Router()
       ({ route: { pathname } }) => pathname.endsWith("/array-fn-matcher"),
     ],
     () => new Response("array")
-  );
-
-const module: Module = {
-  handler: router.createHandler(),
-};
-
-export default module;
+  )
+  .createModule();

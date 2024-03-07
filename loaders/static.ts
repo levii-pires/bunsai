@@ -1,4 +1,5 @@
 import type { BuildResult, Extname, RequestData } from "../types";
+import type FilenameParser from "../internals/filename";
 import Loader from "../internals/loader";
 
 export default class StaticLoader extends Loader {
@@ -12,11 +13,12 @@ export default class StaticLoader extends Loader {
     return new Response(Bun.file(filePath));
   }
 
-  build(filePath: string): BuildResult[] {
+  build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
     return [
       {
         content: Bun.file(filePath),
-        type: "static",
+        type: "asset",
+        filename: filenameParser.parse("[name][ext]"),
       },
     ];
   }

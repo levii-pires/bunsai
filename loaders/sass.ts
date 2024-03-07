@@ -43,8 +43,8 @@ export default class SassLoader extends Loader {
     return [
       {
         content: css,
-        type: "static",
-        filename: filenameParser.parse("$name.css"),
+        type: "asset",
+        filename: filenameParser.parse("[name].css"),
       },
     ];
   }

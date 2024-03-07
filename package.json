@@ -8,6 +8,7 @@
     "bun",
     "next"
   ],
+  "bin": "./cli.ts",
   "bugs": {
     "url": "https://github.com/levii-pires/bunsai/issues"
   },
@@ -34,10 +35,15 @@
     "recommended.ts",
     "internals",
     "middlewares",
-    "util"
+    "util",
+    "globals.ts",
+    "cli.ts"
   ],
   "license": "MIT",
   "private": false,
   "type": "module",
-  "dependencies": {}
+  "dependencies": {
+    "commander": "^12.0.0",
+    "dree": "^4.7.0"
+  }
 }
