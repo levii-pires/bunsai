@@ -10,6 +10,7 @@
     "sourceMap": true,
     "noEmit": true,
     "types": ["@types/bun"],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noImplicitOverride": true
   }
 }

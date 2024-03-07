@@ -1,6 +1,6 @@
 import { it, expect } from "bun:test";
 import { Server, nanoseconds } from "bun";
-import BunSai, { BunSaiOptions } from "..";
+import BunSaiDev, { BunSaiOptions } from "..";
 
 interface TestOptions {
   testKey: string;
@@ -72,7 +72,7 @@ export function loaderTest({
 }
 
 export function getInstance(options: BunSaiOptions) {
-  const bunsai = new BunSai(options);
+  const bunsai = new BunSaiDev(options);
 
   bunsai.setup();
 

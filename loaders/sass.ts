@@ -16,9 +16,8 @@ export default class SassLoader extends Loader {
     super();
   }
 
-  async setup(opts: ResolvedBunSaiOptions) {
+  override async setup(opts: ResolvedBunSaiOptions) {
     this.cache = await FSCache.init("loader", "sass", opts.dev);
-    return super.setup(opts);
   }
 
   async handle(filePath: string, { request }: RequestData) {

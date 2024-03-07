@@ -4,7 +4,6 @@ import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
 import type { CORSOptions } from "./middlewares/cors";
 import type Loader from "./internals/loader";
-import type BunSai from ".";
 
 export interface BuildResult {
   /**
@@ -103,7 +102,6 @@ export interface BunSaiOptions {
 export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
 
 export interface RecommendedOpts {
-  bunsai?: Omit<BunSaiOptions, "loaders" | "staticFiles" | "middlewares">;
   nunjucks?: ConfigureOptions;
   sass?: Options<"sync">;
   middlewares?: {
@@ -112,14 +110,17 @@ export interface RecommendedOpts {
   };
 }
 
-/**
- * Create BunSai instance with recommended loaders and static files.
- * 
+export interface Recommended {
+  /**
  * Loaders:
  * - ModuleLoader
  * - NunjucksLoader
  * - SassLoader
  * - WebLoader
+ * 
+ * Middlewares:
+ * - DDOS
+ * - CORS
  * 
  * Static files:
  *  
@@ -146,8 +147,10 @@ export interface RecommendedOpts {
       - ".woff",
       - ".woff2",
  */
-export interface Recommended {
-  bunsai: BunSai;
+  bunsai: Pick<
+    ResolvedBunSaiOptions,
+    "loaders" | "middlewares" | "staticFiles"
+  >;
 
   nunjucks: {
     /**
@@ -208,16 +211,16 @@ export interface BunSaiMiddlewareRecord {
 
 export interface BuildManifest {
   files: Record<string, BuildResult["type"]>;
-  extensions: string[];
+  extensions: Extname[];
 }
 
-export interface UserConfig extends RecommendedOpts {
+export interface UserConfig extends BunSaiOptions {
   /**
    * @default "./bunsai-build"
    */
   output?: string;
 
-  serveOptions?: Omit<Serve<any>, "fetch">;
+  serve?: Omit<Serve<any>, "fetch">;
 }
 
 export {};

@@ -1,4 +1,4 @@
-import type BunSai from "..";
+import type BunSai from "../bunsai-core";
 
 export function initMiddlewares(bunsai: BunSai) {
   for (const middleware of bunsai.options.middlewares) {

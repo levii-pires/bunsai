@@ -21,7 +21,7 @@ export default class ModuleLoader extends Loader {
   cache: FSCache | null = null;
   dev = false;
 
-  async setup(opts: ResolvedBunSaiOptions) {
+  override async setup(opts: ResolvedBunSaiOptions) {
     this.cache = await FSCache.init("loader", "module", opts.dev);
     this.dev = opts.dev;
   }

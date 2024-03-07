@@ -1,5 +1,8 @@
 import type { UserConfig } from "bunsai";
+import useRecommended from "bunsai/recommended";
 
-const options: UserConfig = {};
+const { bunsai } = await useRecommended();
+
+const options: UserConfig = bunsai;
 
 export default options;

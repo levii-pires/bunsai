@@ -1,6 +1,6 @@
 import { RmOptions, watch } from "fs";
 import { mkdir, rm } from "fs/promises";
-import { join, basename, parse } from "path";
+import { join, parse } from "path";
 
 type WriteInput =
   | string
@@ -21,9 +21,10 @@ export default class FSCache {
    * @param dev If `true`, the cache will watch the source file for changes,
    * removing the corresponding cache file when any change occurs and allowing
    * any re-render logic that relies on `FSCache#file(...).exists()`
+   * @param type **NOTE:** "build" and "server" are meant for internal usage
    */
   constructor(
-    public type: "loader" | "middleware" | "build",
+    public type: "loader" | "middleware" | "build" | "server",
     public name: string,
     public dev?: boolean
   ) {

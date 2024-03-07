@@ -4,7 +4,6 @@ import NunjucksLoader from "./loaders/nunjucks";
 import SassLoader from "./loaders/sass";
 import DDOS from "./middlewares/ddos";
 import CORS from "./middlewares/cors";
-import BunSai from ".";
 import WebLoader from "./loaders/web";
 
 export default async function useRecommended(
@@ -14,36 +13,6 @@ export default async function useRecommended(
 
   const { preflight, response } = CORS(opts?.middlewares?.cors);
 
-  const bunsai = await BunSai.init({
-    ...opts?.bunsai,
-    loaders: [
-      new ModuleLoader(),
-      nunjucks,
-      new SassLoader(opts?.sass),
-      new WebLoader(),
-    ],
-    staticFiles: [
-      ".html",
-      ".css",
-      ".js",
-      ".json",
-      ".txt",
-      ".webp",
-      ".gif",
-      ".mp4",
-      ".mov",
-      ".ogg",
-      ".mp3",
-      ".aac",
-      ".ico",
-      ".ttf",
-      ".otf",
-      ".woff",
-      ".woff2",
-    ],
-    middlewares: [new DDOS(opts?.middlewares?.ddos), preflight, response],
-  });
-
   return {
     nunjucks: {
       env() {
@@ -51,6 +20,33 @@ export default async function useRecommended(
       },
     },
 
-    bunsai,
+    bunsai: {
+      loaders: [
+        new ModuleLoader(),
+        nunjucks,
+        new SassLoader(opts?.sass),
+        new WebLoader(),
+      ],
+      staticFiles: [
+        ".html",
+        ".css",
+        ".js",
+        ".json",
+        ".txt",
+        ".webp",
+        ".gif",
+        ".mp4",
+        ".mov",
+        ".ogg",
+        ".mp3",
+        ".aac",
+        ".ico",
+        ".ttf",
+        ".otf",
+        ".woff",
+        ".woff2",
+      ],
+      middlewares: [new DDOS(opts?.middlewares?.ddos), preflight, response],
+    },
   };
 }

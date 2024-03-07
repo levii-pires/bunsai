@@ -1,6 +1,6 @@
 {
   "name": "bunsai",
-  "version": "0.4.0-3",
+  "version": "0.4.0-7",
   "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
@@ -9,8 +9,8 @@
     "next"
   ],
   "bin": {
-    "bunsai-dev": "cli/dev.js",
-    "bunsai-build": "cli/build.js"
+    "bunsai-dev": "cli/dev.ts",
+    "bunsai-build": "cli/build.ts"
   },
   "bugs": {
     "url": "https://github.com/levii-pires/bunsai/issues"
@@ -40,7 +40,8 @@
     "middlewares",
     "util",
     "globals.ts",
-    "cli"
+    "cli",
+    "bunsai-core.ts"
   ],
   "license": "MIT",
   "private": false,

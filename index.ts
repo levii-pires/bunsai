@@ -1,45 +1,21 @@
 import type { Server } from "bun";
-import type {
-  Extname,
-  LoaderMap,
-  BunSaiOptions,
-  ResolvedBunSaiOptions,
-  BunSaiMiddlewareRecord,
-} from "./types";
+import type { Extname, LoaderMap, BunSaiOptions } from "./types";
 import { extname } from "path";
-import MiddlewareChannel from "./internals/middlewareChannel";
-import { resolveOptions } from "./internals/options";
 import { getStatic } from "./internals/static";
 import { initLoaders } from "./internals/loaders";
-import { initMiddlewares } from "./internals/middlewares";
 import { LoaderNotFoundError } from "./internals/errors";
 import { build } from "./internals/build";
+import BunSai from "./bunsai-core";
 
-export default class BunSai {
-  readonly router: InstanceType<typeof Bun.FileSystemRouter>;
+export default class BunSaiDev extends BunSai {
   readonly loaders: LoaderMap = new Map();
-  readonly options: ResolvedBunSaiOptions;
-  readonly middlewares = MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>(
-    ["notFound", "request", "response", "error", "end"]
-  );
   protected $ready = Promise.withResolvers<void>();
 
   constructor(options: BunSaiOptions) {
-    this.options = resolveOptions(options);
-
-    const fileExtensions = this.options.staticFiles.concat(
-      this.options.loaders.map((l) => l.extensions).flat()
-    );
-
-    this.router = new Bun.FileSystemRouter({
-      ...this.options,
-      style: "nextjs",
-      fileExtensions,
-    });
+    super(options);
 
     getStatic(this);
     initLoaders(this);
-    initMiddlewares(this);
   }
 
   protected async $build() {
@@ -55,7 +31,7 @@ export default class BunSai {
     this.$ready.resolve();
   }
 
-  protected async $fetch(request: Request, server: Server) {
+  protected override async $fetch(request: Request, server: Server) {
     try {
       const reqResult = await this.middlewares.request.call(
         { request, server },
@@ -115,21 +91,6 @@ export default class BunSai {
 
       throw error;
     }
-  }
-
-  get fetch() {
-    const that = this;
-
-    return async function (this: Server, request: Request) {
-      const response = await that.$fetch(request, this);
-
-      const endRes = await that.middlewares.end.call(
-        { response, request, server: this },
-        that.options.dev
-      );
-
-      return endRes || response;
-    };
   }
 
   get setup() {

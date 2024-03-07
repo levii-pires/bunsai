@@ -57,7 +57,7 @@ export default class NunjucksLoader extends Loader {
     super();
   }
 
-  setup(opts: ResolvedBunSaiOptions) {
+  override setup(opts: ResolvedBunSaiOptions) {
     this.env = configure(opts.dir, this.options);
     this.rootPath = resolve(opts.dir);
   }
