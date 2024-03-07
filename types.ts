@@ -1,4 +1,4 @@
-import type { BuildConfig, BunFile, MatchedRoute, Server } from "bun";
+import type { BunFile, BunPlugin, MatchedRoute, Server } from "bun";
 import type { ConfigureOptions, Environment } from "nunjucks";
 import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
@@ -8,10 +8,21 @@ import type BunSai from ".";
 
 export interface BuildResult {
   /**
-   * @default parseFilename("$name$ext")
+   * Provide a custom filename. Special characters:
+   * - `[name]`: original file name
+   * - `[ext]` : original file extension
+   * - `[hash]`: original absolute file path hash
+   * - `[time]`: FilenameParser instance creation timestamp
    */
   filename?: string;
-  serve: "module" | "bundle" | "static" | "loader";
+  /**
+   * {@link content} type:
+   * - `server`: must be a {@link Module} compliant JS/TS code
+   * - `browser`: must be a browser targeted JS/TS code
+   * - `asset`: content will be served statically
+   */
+  type: "server" | "browser" | "asset";
+  plugins?: BunPlugin[];
   content: Blob | NodeJS.TypedArray | ArrayBufferLike | string | Bun.BlobPart[];
 }
 
@@ -37,16 +48,13 @@ export type ModuleHandler = (
 
 export type CacheInvalidateHandler = (data: RequestData) => boolean;
 
-/**
- * Implemented by the [`ModuleLoader`](./loaders/module.ts)
- */
 export interface Module {
   handler: ModuleHandler;
   headers?: Record<string, string>;
   /**
    * If this method is not implemented, the ModuleLoader will always run the {@link handler}.
    *
-   * **NOTE:** caching is ignored if {@link ResolvedBunSaiOptions.dev} is true.
+   * **NOTE:** caching is ignored in dev mode.
    */
   invalidate?: CacheInvalidateHandler;
 }

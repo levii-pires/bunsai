@@ -53,10 +53,10 @@ export default class NunjucksLoader extends Loader {
 
   build(filePath: string, filenameParser: FilenameParser): BuildResult[] {
     return [
-      { serve: "static" },
+      { type: "static" },
       {
         content: Bun.file(filePath),
-        serve: "loader",
+        type: "loader",
       },
     ];
   }

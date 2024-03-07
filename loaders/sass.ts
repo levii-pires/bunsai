@@ -43,7 +43,7 @@ export default class SassLoader extends Loader {
     return [
       {
         content: css,
-        serve: "static",
+        type: "static",
         filename: filenameParser.parse("$name.css"),
       },
     ];

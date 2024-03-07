@@ -1,7 +1,10 @@
-import type { ModuleHandler, CacheInvalidateHandler } from "bunsai";
+import type { ModuleHandler, CacheInvalidateHandler, Module } from "bunsai";
 
-export const handler: ModuleHandler = async () => {
-  return "test!";
+const module: Module = {
+  handler: async () => {
+    return "test!";
+  },
+  invalidate: () => false,
 };
 
-export const invalidate: CacheInvalidateHandler = () => false;
+export default module;

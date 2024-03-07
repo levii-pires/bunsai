@@ -16,7 +16,7 @@ export default class StaticLoader extends Loader {
     return [
       {
         content: Bun.file(filePath),
-        serve: "static",
+        type: "static",
       },
     ];
   }

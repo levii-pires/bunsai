@@ -43,7 +43,7 @@ export async function build(bunsai: BunSai) {
 
       const outPath = resolve(buildFolder, relativeOut, fln);
 
-      switch (res.serve) {
+      switch (res.type) {
         case "bundle": {
           bundleEntries.push(await cache.write(outPath, res.content));
           break;

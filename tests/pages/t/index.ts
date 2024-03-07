@@ -1,6 +1,7 @@
 import { Router } from "bunsai/util";
+import type { Module } from "bunsai/types";
 
-export const { handler } = new Router()
+const router = new Router()
   .get("/router-method", ({ response }) =>
     response(new Response(null, { status: 204 }))
   )
@@ -14,3 +15,5 @@ export const { handler } = new Router()
     ],
     () => new Response("array")
   );
+
+export default router.createModule();

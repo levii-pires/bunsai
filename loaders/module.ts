@@ -29,7 +29,8 @@ export default class ModuleLoader extends Loader {
   async handle(filePath: string, data: RequestData) {
     if (!this.cache) throw new Error("null cache; run setup first");
 
-    const { handler, headers, invalidate } = (await import(filePath)) as Module;
+    const { handler, headers, invalidate } = (await import(filePath))
+      .default as Module;
 
     if (typeof handler != "function")
       throw new Error(
@@ -68,7 +69,7 @@ export default class ModuleLoader extends Loader {
   build(filePath: string): BuildResult[] {
     return [
       {
-        serve: "module",
+        type: "server",
         content: Bun.file(filePath),
       },
     ];

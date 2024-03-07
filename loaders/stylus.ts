@@ -72,7 +72,7 @@ export default class StylusLoader extends Loader {
     return [
       {
         content: await promise,
-        serve: "static",
+        type: "static",
         filename: filenameParser.parse("$name.css"),
       },
     ];

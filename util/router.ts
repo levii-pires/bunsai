@@ -1,4 +1,9 @@
-import type { MiddlewareResult, ModuleData, ModuleHandler } from "../types";
+import type {
+  MiddlewareResult,
+  Module,
+  ModuleData,
+  ModuleHandler,
+} from "../types";
 import MiddlewareChannel from "../internals/middlewareChannel";
 
 type Methods = typeof methods extends readonly (infer T)[] ? T : never;
@@ -173,7 +178,16 @@ export default class Router implements RouteMethodRecord {
     );
   }
 
-  get handler(): ModuleHandler {
+  /**
+   * Use {@link createHandler} instead.
+   * @deprecated
+   */
+  get handler() {
+    console.warn("Router#handler is deprecated. Use Router#getHandler instead");
+    return this.createHandler();
+  }
+
+  createHandler(): ModuleHandler {
     const that = this;
 
     return async function RouterHandler({ request, route, server }) {
@@ -203,6 +217,15 @@ export default class Router implements RouteMethodRecord {
       if (!data[RouterMatch]) return new Response(null, { status: 404 });
 
       return channelResponse!;
+    };
+  }
+
+  /**
+   * v0.4: This function currently does not make assumptions about cache invalidation
+   */
+  createModule(): Module {
+    return {
+      handler: this.createHandler(),
     };
   }
 }
