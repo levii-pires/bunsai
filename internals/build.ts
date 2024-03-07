@@ -12,7 +12,7 @@ import BunSai from "bunsai/bunsai-core";
 import { outputFolder, manifestFilename, userConfig } from "bunsai/globals";
 import { join } from "path";
 
-const { fetch } = new BunSai(userConfig || {}, await Bun.file(join(outputFolder, manifestFilename)).json());
+const { fetch } = new BunSai({ ...userConfig, dir: outputFolder }, await Bun.file(join(outputFolder, manifestFilename)).json());
 
 const server = Bun.serve({
   ...userConfig?.serve,
@@ -68,7 +68,7 @@ export async function build(bunsai: BunSaiDev) {
         }
         default: {
           await Bun.write(outPath, res.content);
-          buildManifest.files[outPath] = "asset";
+          buildManifest.files[outPath.replaceAll("\\", "/")] = "asset";
           buildManifest.extensions.push(extname(outPath) as Extname);
           break;
         }
@@ -102,7 +102,9 @@ export async function build(bunsai: BunSaiDev) {
 
     for (const out of outputs) {
       if (out.kind == "entry-point") {
-        buildManifest.files[resolve(outputFolder, out.path)] = "browser";
+        buildManifest.files[
+          resolve(outputFolder, out.path).replaceAll("\\", "/")
+        ] = "browser";
         buildManifest.extensions.push(extname(out.path) as Extname);
       }
     }
@@ -115,7 +117,7 @@ export async function build(bunsai: BunSaiDev) {
       target: "bun",
       outdir: outputFolder,
       minify: true,
-      naming: { chunk: ".server-[name]-[hash].[ext]" },
+      naming: { chunk: ".module-[name]-[hash].[ext]" },
     });
 
     if (!success) {
@@ -124,7 +126,9 @@ export async function build(bunsai: BunSaiDev) {
 
     for (const out of outputs) {
       if (out.kind == "entry-point") {
-        buildManifest.files[resolve(outputFolder, out.path)] = "server";
+        buildManifest.files[
+          resolve(outputFolder, out.path).replaceAll("\\", "/")
+        ] = "server";
         buildManifest.extensions.push(extname(out.path) as Extname);
       }
     }
@@ -144,4 +148,6 @@ export async function build(bunsai: BunSaiDev) {
   console.log();
 
   console.log(await parseAsync(outputFolder));
+
+  console.log(`\nNow run 'bun ${outputFolder}/.server-entrypoint.js'`);
 }
