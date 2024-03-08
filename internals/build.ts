@@ -184,5 +184,5 @@ export async function build(bunsai: BunSaiDev) {
 
   console.log(await parseAsync(outputFolder));
 
-  console.log(`\nNow run 'bun ${outputFolder}/.server-entrypoint.js'`);
+  console.log(`\nNow run 'bun ${outputFolder}/${serverEntrypointFilename}'`);
 }
