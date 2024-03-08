@@ -1,16 +1,36 @@
 import type { BuildManifest, Extname } from "../types";
 import type BunSaiDev from "..";
-import { dirname, extname, relative, resolve, join } from "path";
+import { dirname, extname, relative, resolve, basename } from "path";
 import FSCache from "./fsCache";
 import FilenameParser from "./filename";
 import { rm } from "fs/promises";
-import { manifestFilename, outputFolder } from "./globals";
+import {
+  getUserConfigFilePath,
+  manifestFilename,
+  outputFolder,
+  serverEntrypointFilename,
+} from "./globals";
 import { parseAsync } from "dree";
+import { version } from "../package.json";
+
+const configFilePath = await getUserConfigFilePath();
+
+const configFilename = configFilePath ? "." + basename(configFilePath) : void 0;
 
 const indexModule = `
 import BunSai from "bunsai/bunsai-core";
-import { outputFolder, manifestFilename, userConfig } from "bunsai/globals";
 import { join } from "path";
+
+${
+  configFilePath
+    ? `import userConfig from "./${configFilename}";`
+    : "const userConfig = {};"
+}
+
+const manifestFilename = "${manifestFilename}";
+const outputFolder = "${outputFolder}";
+
+global.BunSai = { userConfig, manifestFilename, outputFolder };
 
 const { fetch } = new BunSai({ ...userConfig, dir: outputFolder }, await Bun.file(join(outputFolder, manifestFilename)).json());
 
@@ -39,7 +59,7 @@ export async function build(bunsai: BunSaiDev) {
 
   const cache = await FSCache.init("build", "@bunsai");
 
-  const buildManifest: BuildManifest = { extensions: [], files: {} };
+  const buildManifest: BuildManifest = { extensions: [], files: {}, version };
 
   for (const file of files) {
     const ext = extname(file).toLowerCase();
@@ -76,11 +96,22 @@ export async function build(bunsai: BunSaiDev) {
     }
   }
 
+  if (configFilePath) {
+    console.log("Injecting user config...");
+
+    serverEntries.push(
+      await cache.write(
+        resolve(outputFolder, configFilename!),
+        Bun.file(configFilePath)
+      )
+    );
+  }
+
   console.log("Injecting server entrypoint...");
 
   serverEntries.push(
     await cache.write(
-      resolve(join(outputFolder, ".server-entrypoint.ts")),
+      resolve(outputFolder, serverEntrypointFilename),
       indexModule
     )
   );
@@ -117,18 +148,28 @@ export async function build(bunsai: BunSaiDev) {
       target: "bun",
       outdir: outputFolder,
       minify: true,
-      naming: { chunk: ".module-[name]-[hash].[ext]" },
+      naming: { chunk: ".server-[name]-[hash].[ext]" },
     });
 
     if (!success) {
       throw new AggregateError(logs, "BunSai build error");
     }
 
+    const tsExt = /\.ts$/;
+
     for (const out of outputs) {
       if (out.kind == "entry-point") {
-        buildManifest.files[
-          resolve(outputFolder, out.path).replaceAll("\\", "/")
-        ] = "server";
+        if (
+          (configFilename &&
+            out.path.endsWith(configFilename.replace(tsExt, ".js"))) ||
+          out.path.endsWith(serverEntrypointFilename)
+        )
+          continue;
+
+        const fil = resolve(outputFolder, out.path).replaceAll("\\", "/");
+
+        buildManifest.files[fil] = "server";
+
         buildManifest.extensions.push(extname(out.path) as Extname);
       }
     }
@@ -139,7 +180,7 @@ export async function build(bunsai: BunSaiDev) {
   ).filter((str) => !!str); // remove duplicated extensions and empty strings
 
   await Bun.write(
-    join(outputFolder, manifestFilename),
+    resolve(outputFolder, manifestFilename),
     JSON.stringify(buildManifest)
   );
 

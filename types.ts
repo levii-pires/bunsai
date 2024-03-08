@@ -212,6 +212,7 @@ export interface BunSaiMiddlewareRecord {
 export interface BuildManifest {
   files: Record<string, BuildResult["type"]>;
   extensions: Extname[];
+  version: string;
 }
 
 export interface UserConfig extends BunSaiOptions {

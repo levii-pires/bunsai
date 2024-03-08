@@ -1,6 +1,6 @@
 import { Glob } from "bun";
 import type { UserConfig } from "../types";
-import { resolve, join } from "path";
+import { resolve } from "path";
 
 const configFileGlob = "bunsai.config.{ts,js}";
 
@@ -28,6 +28,7 @@ async function getUserConfig() {
   return options;
 }
 
+export const serverEntrypointFilename = ".server-entrypoint.js";
 export const userConfig = await getUserConfig();
 export const outputFolder = userConfig?.output || "./bunsai-build";
 export const manifestFilename = ".bunsai-manifest.json";

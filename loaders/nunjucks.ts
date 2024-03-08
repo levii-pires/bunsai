@@ -4,13 +4,14 @@ import { relative, resolve } from "path";
 import { configure, type ConfigureOptions, type Environment } from "nunjucks";
 import Loader from "../internals/loader";
 
-const njkFilename = ".[name]-content";
+const njkFilename = ".[name]-content.njk";
 
 const module = `
   import { configure } from "nunjucks";
   import { relative } from "path";
-  import { outputFolder, userConfig } from "bunsai/globals";
   import FilenameParser from "bunsai/internals/filename";
+
+  const { outputFolder, userConfig } = global.BunSai;
 
   const env = (global.NunjucksEnv ||= configure(outputFolder, userConfig?.nunjucks)); 
 

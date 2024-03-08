@@ -80,7 +80,10 @@ export default class BunSai {
       const routeType = this.manifest.files[route.filePath];
 
       if (!routeType)
-        throw new Error(`'${route.filePath}' is not declared in the manifest`);
+        return new Response(null, {
+          status: 500,
+          statusText: `'${route.filePath}' is not declared in the manifest`,
+        });
 
       switch (routeType) {
         case "server": {
