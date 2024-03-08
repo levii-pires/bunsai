@@ -1,5 +1,5 @@
 import { Glob } from "bun";
-import type { UserConfig } from "./types";
+import type { UserConfig } from "../types";
 import { resolve, join } from "path";
 
 const configFileGlob = "bunsai.config.{ts,js}";

@@ -4,7 +4,7 @@ import { dirname, extname, relative, resolve, join } from "path";
 import FSCache from "./fsCache";
 import FilenameParser from "./filename";
 import { rm } from "fs/promises";
-import { manifestFilename, outputFolder } from "../globals";
+import { manifestFilename, outputFolder } from "./globals";
 import { parseAsync } from "dree";
 
 const indexModule = `
