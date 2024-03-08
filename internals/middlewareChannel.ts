@@ -44,7 +44,7 @@ export default class MiddlewareChannel<Data> {
     if (this.has(name))
       throw new Error(`'${name}' already exists on this middleware channel`);
 
-    if (!this.space) throw new Error("exceeded middleware channel limit");
+    if (this.space <= 0) throw new Error("exceeded middleware channel limit");
 
     this[Middlewares].set(name, middleware);
 
