@@ -157,11 +157,7 @@ export async function build(bunsai: BunSaiDev) {
 
     for (const out of outputs) {
       if (out.kind == "entry-point") {
-        if (
-          (configFilename &&
-            out.path.endsWith(configFilename.replace(tsExt, ".js"))) ||
-          out.path.endsWith(serverEntrypointFilename)
-        )
+        if (basename(out.path).startsWith("."))
           continue;
 
         const fil = resolve(outputFolder, out.path).replaceAll("\\", "/");
