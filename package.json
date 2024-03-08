@@ -1,6 +1,6 @@
 {
   "name": "bunsai",
-  "version": "0.4.0-27",
+  "version": "0.4.0-28",
   "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
