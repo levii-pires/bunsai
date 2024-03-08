@@ -13,7 +13,9 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - run: "bun install"
-      - run: "bun link"
+      - uses: JS-DevTools/npm-publish@v3
+        continue-on-error: true
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
       - run: "bun install && bun test"
         working-directory: "./tests"
