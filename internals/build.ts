@@ -50,8 +50,6 @@ export async function build(bunsai: BunSaiDev) {
 
   await rm(outputFolder, { force: true, recursive: true });
 
-  console.log("Done\n");
-
   const files = Object.values(bunsai.router.routes);
 
   const browserEntries: string[] = [];
