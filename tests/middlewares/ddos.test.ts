@@ -1,4 +1,4 @@
-import DDOS from "../../middlewares/ddos";
+import DDOS from "bunsai/middlewares/ddos";
 import { describe, expect, it } from "bun:test";
 import { setTimeout } from "timers/promises";
 import { getInstance } from "../testing";

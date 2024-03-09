@@ -1,6 +1,6 @@
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
-import WebLoader from "../../loaders/web";
+import WebLoader from "bunsai/loaders/web";
 
 describe("Web Loader", () => {
   loaderTest({

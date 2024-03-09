@@ -1,6 +1,6 @@
 import { it, expect } from "bun:test";
 import { Server, nanoseconds } from "bun";
-import BunSaiDev, { BunSaiOptions } from "..";
+import BunSaiDev, { BunSaiOptions } from "bunsai";
 
 interface TestOptions {
   testKey: string;

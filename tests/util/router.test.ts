@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { getInstance } from "../testing";
-import ModuleLoader from "../../loaders/module";
+import ModuleLoader from "bunsai/loaders/module";
 
 const {
   server,

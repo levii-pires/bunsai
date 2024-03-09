@@ -1,4 +1,4 @@
-import SassLoader from "../../loaders/sass";
+import SassLoader from "bunsai/loaders/sass";
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
 

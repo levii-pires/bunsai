@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { CORSPreflight, CORSResponse } from "../../middlewares/cors";
+import { CORSPreflight, CORSResponse } from "bunsai/middlewares/cors";
 import { getInstance } from "../testing";
 
 const { server, bunsai } = getInstance({

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { MiddlewareRunnerWithThis } from "..";
-import NunjucksLoader from "../loaders/nunjucks";
+import { MiddlewareRunnerWithThis } from "bunsai/types";
+import NunjucksLoader from "bunsai/loaders/nunjucks";
 import { Server } from "bun";
-import Middleware from "../internals/middleware";
+import Middleware from "bunsai/internals/middleware";
 import { getInstance } from "./testing";
 
 const nunjucks = new NunjucksLoader();

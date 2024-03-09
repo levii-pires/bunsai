@@ -1,6 +1,6 @@
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
-import ModuleLoader from "../../loaders/module";
+import ModuleLoader from "bunsai/loaders/module";
 
 describe("Module Loader", () => {
   loaderTest({

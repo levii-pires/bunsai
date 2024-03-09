@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import MiddlewareChannel from "../../internals/middlewareChannel";
+import MiddlewareChannel from "bunsai/internals/middlewareChannel";
 
 const middleware = new MiddlewareChannel();
 

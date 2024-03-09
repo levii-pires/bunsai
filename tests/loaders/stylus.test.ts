@@ -1,4 +1,4 @@
-import StylusLoader from "../../loaders/stylus";
+import StylusLoader from "bunsai/loaders/stylus";
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
 

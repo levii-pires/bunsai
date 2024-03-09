@@ -1,4 +1,4 @@
-import NunjucksLoader from "../../loaders/nunjucks";
+import NunjucksLoader from "bunsai/loaders/nunjucks";
 import { loaderTest } from "../testing";
 import { describe } from "bun:test";
 
