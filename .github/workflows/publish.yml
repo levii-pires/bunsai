@@ -19,7 +19,13 @@ on:
         type: string
 
 jobs:
+  config_git:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'git config --global user.email "${{ github.event.pusher.email || github.event.sender.email }}"'
+      - run: 'git config --global user.name "${{ github.event.pusher.name || github.event.sender.name }}"'
   publish_dev:
+    needs: config_git
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
@@ -33,6 +39,7 @@ jobs:
         with:
           bun-version: latest
       - run: 'npm config set preid "canary"'
+      # - run: "npm config set git-tag-version false"
       - run: "npm version prepatch"
       - uses: JS-DevTools/npm-publish@v3
         with:
@@ -43,6 +50,7 @@ jobs:
         working-directory: "./tests"
 
   publish_dispatch:
+    needs: config_git
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
