@@ -1,4 +1,6 @@
 on:
+  push:
+    branches: dev
   workflow_dispatch:
     inputs:
       version_type:
@@ -17,6 +19,7 @@ on:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
