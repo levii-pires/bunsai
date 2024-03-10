@@ -47,4 +47,7 @@ jobs:
       - run: "bun install"
       - run: "bun add bunsai@${{ github.event.inputs.npm_tag }} && bun test"
         working-directory: "./tests"
-      - run: "git push"
+      - uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
