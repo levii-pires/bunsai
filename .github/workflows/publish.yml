@@ -26,7 +26,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      actions: write
     steps:
       - run: 'git config --global user.email "github-actions[bot]"'
       - run: 'git config --global user.name "github-actions[bot]@users.noreply.github.com"'
