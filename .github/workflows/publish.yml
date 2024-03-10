@@ -18,6 +18,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -26,14 +28,13 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - run: 'npm config set preid "${{github.event.inputs.npm_tag}}"'
+      - run: 'npm config set preid "${{ github.event.inputs.npm_tag }}"'
         if: github.event.inputs.npm_tag != 'latest'
-      - run: "npm version ${{github.event.inputs.version_type}}"
+      - run: "npm version ${{ github.event.inputs.version_type }}"
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
-          tag: ${{github.event.inputs.npm_tag}}
-        continue-on-error: true
+          tag: ${{ github.event.inputs.npm_tag }}
       - run: "bun install"
-      - run: "bun add bunsai@${{github.event.inputs.npm_tag}} && bun test"
+      - run: "bun add bunsai@${{ github.event.inputs.npm_tag }} && bun test"
         working-directory: "./tests"
