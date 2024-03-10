@@ -13,27 +13,10 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - id: "v-prepatch"
-        run: "npm version prepatch"
-        if: contains(github.event.commits.message, 'npm-version:prepatch')
-      - id: "v-patch"
-        run: "npm version patch"
-        if: contains(github.event.commits.message, 'npm-version:patch')
-      - id: "v-preminor"
-        run: "npm version preminor"
-        if: contains(github.event.commits.message, 'npm-version:preminor')
-      - id: "v-minor"
-        run: "npm version minor"
-        if: contains(github.event.commits.message, 'npm-version:minor')
-      - id: "v-premajor"
-        run: "npm version premajor"
-        if: contains(github.event.commits.message, 'npm-version:premajor')
-      - id: "v-major"
-        run: "npm version major"
-        if: contains(github.event.commits.message, 'npm-version:major')
       - uses: JS-DevTools/npm-publish@v3
-        if: steps.v-major.conclusion == 'success' || steps.v-minor.conclusion == 'success' || steps.v-patch.conclusion == 'success' || steps.v-premajor.conclusion == 'success' || steps.v-preminor.conclusion == 'success' || steps.v-prepatch.conclusion == 'success'
         with:
           token: ${{ secrets.NPM_TOKEN }}
+          tag: canary
+        continue-on-error: true
       - run: "bun install && bun test"
         working-directory: "./tests"

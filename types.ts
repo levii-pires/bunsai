@@ -4,6 +4,8 @@ import type { Options } from "sass";
 import type { DDOSOptions } from "./middlewares/ddos";
 import type { CORSOptions } from "./middlewares/cors";
 import type Loader from "./internals/loader";
+import type FilenameParser from "./internals/filename";
+import type { MiddlewareCollection } from "./internals/middleware";
 
 export interface BuildResult {
   /**
@@ -96,7 +98,7 @@ export interface BunSaiOptions {
   /**
    * @default []
    */
-  middlewares?: AllMiddlewares[];
+  middlewares?: (AllMiddlewares | MiddlewareCollection)[];
 }
 
 export type ResolvedBunSaiOptions = Required<BunSaiOptions>;
@@ -215,13 +217,25 @@ export interface BuildManifest {
   version: string;
 }
 
-export interface UserConfig extends BunSaiOptions {
+export type DependencyDecl = string | [string, object];
+
+export interface UserConfig
+  extends Omit<BunSaiOptions, "loaders" | "middlewares"> {
+  loaders?: DependencyDecl[];
+  middlewares?: DependencyDecl[];
+
   /**
    * @default "./bunsai-build"
    */
   output?: string;
-
   serve?: Omit<Serve<any>, "fetch">;
 }
+
+export interface GenericBuildArgs {
+  filePath: string;
+  filenameParser: FilenameParser;
+}
+
+export type BuildArgs = {};
 
 export {};
