@@ -7,9 +7,9 @@ import { name, version } from "../package.json";
 
 console.log(`${name}@${version}\n`);
 
-const { fetch } = await BunSaiDev.init(
-  await userConf2Options(userConfig || {})
-);
+const options = await userConf2Options(userConfig || {});
+
+const { fetch } = await BunSaiDev.init(options);
 
 const server = Bun.serve({
   ...userConfig?.serve,

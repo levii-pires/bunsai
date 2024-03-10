@@ -1,6 +1,7 @@
 import type { UserConfig, BunSaiOptions, AllMiddlewares } from "../types";
 import type { MiddlewareCollection } from "./middleware";
 import type Loader from "./loader";
+import { resolve } from "path";
 
 interface EvalDeclArgs {
   path: string;
@@ -9,9 +10,9 @@ interface EvalDeclArgs {
 }
 
 async function evalDecl(args: EvalDeclArgs) {
-  const loader = (await import(args.path)).default;
+  const item = (await import(resolve("node_modules", args.path))).default;
 
-  args.target.push(new loader(args.options));
+  args.target.push(new item(args.options));
 }
 
 export async function userConf2Options(
@@ -30,11 +31,7 @@ export async function userConf2Options(
 
       const [path, options] = loader;
 
-      await evalDecl({
-        path,
-        options,
-        target: loaders,
-      });
+      await evalDecl({ path, options, target: loaders });
     }
   }
 

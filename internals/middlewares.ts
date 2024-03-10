@@ -26,6 +26,7 @@ export function initMiddlewares(bunsai: BunSai) {
       continue;
     }
 
+    console.log(middleware);
     throw new TypeError(
       "middleware must be an instance of Middleware or MiddlewareCollection"
     );
