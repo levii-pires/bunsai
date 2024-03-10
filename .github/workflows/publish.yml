@@ -32,12 +32,17 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - run: 'npm config set preid "canary"'
+        if: github.event.inputs.npm_tag != 'latest'
+      - run: "npm version ${{ github.event.inputs.version_type }}"
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
+          tag: "canary"
       - run: "bun install"
-      - run: "bun install && bun test"
+      - run: "bun add bunsai@canary && bun test"
         working-directory: "./tests"
+
   publish_dispatch:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
