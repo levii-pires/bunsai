@@ -51,5 +51,5 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           tag: ${{ github.event.inputs.npm_tag }}
       - run: "bun install"
-      - run: "bun add bunsai@${{ github.event.inputs.npm_tag }} && bun test"
+      - run: "bun install && bun test"
         working-directory: "./tests"
