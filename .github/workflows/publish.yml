@@ -16,13 +16,12 @@ on:
         required: true
       npm_tag:
         default: canary
-        type: string
-      user_name:
-        type: string
-        required: true
-      user_email:
-        type: string
-        required: true
+        type: choice
+        options:
+          - canary
+          - latest
+          - alpha
+          - beta
 
 jobs:
   publish:
@@ -31,8 +30,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - run: 'git config --global user.email "${{ github.event.inputs.user_name }}"'
-      - run: 'git config --global user.name "${{ github.event.inputs.user_email }}"'
+      - run: 'git config --global user.email "github-actions[bot]"'
+      - run: 'git config --global user.name "github-actions[bot]@users.noreply.github.com"'
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
