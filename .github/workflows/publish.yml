@@ -17,6 +17,12 @@ on:
       npm_tag:
         default: canary
         type: string
+      user_name:
+        type: string
+        required: true
+      user_email:
+        type: string
+        required: true
 
 jobs:
   publish:
@@ -25,8 +31,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - run: 'git config --global user.email "${{ github.event.pusher.email || github.event.sender.email }}"'
-      - run: 'git config --global user.name "${{ github.event.pusher.name || github.event.sender.name }}"'
+      - run: 'git config --global user.email "${{ github.event.inputs.user_name }}"'
+      - run: 'git config --global user.name "${{ github.event.inputs.user_email }}"'
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
