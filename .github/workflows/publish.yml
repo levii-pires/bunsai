@@ -50,3 +50,4 @@ jobs:
       - run: "bun install"
       - run: "bun add bunsai@${{ github.event.inputs.npm_tag }} && bun test"
         working-directory: "./tests"
+      - run: "git push"
