@@ -33,8 +33,7 @@ jobs:
         with:
           bun-version: latest
       - run: 'npm config set preid "canary"'
-        if: github.event.inputs.npm_tag != 'latest'
-      - run: "npm version ${{ github.event.inputs.version_type }}"
+      - run: "npm version prepatch"
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
