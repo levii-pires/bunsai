@@ -18,5 +18,6 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           tag: canary
         continue-on-error: true
+      - run: "bun install"
       - run: "bun install && bun test"
         working-directory: "./tests"
