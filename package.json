@@ -1,6 +1,6 @@
 {
   "name": "bunsai",
-  "version": "0.4.0-canary.3",
+  "version": "0.4.0-canary.4",
   "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
