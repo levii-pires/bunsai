@@ -1,0 +1,39 @@
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        type: choice
+        options:
+          - prepatch
+          - preminor
+          - premajor
+          - patch
+          - minor
+          - major
+        required: true
+      npm_tag:
+        default: canary
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: 'npm config set preid "${{github.event.inputs.npm_tag}}"'
+        if: github.event.inputs.npm_tag != 'latest'
+      - run: "npm version ${{github.event.inputs.version_type}}"
+      - uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          tag: ${{github.event.inputs.npm_tag}}
+        continue-on-error: true
+      - run: "bun install"
+      - run: "bun add bunsai@${{github.event.inputs.npm_tag}} && bun test"
+        working-directory: "./tests"
