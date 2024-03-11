@@ -50,6 +50,7 @@ jobs:
       - run: "bun install && bun link"
       - run: "bun install && bun test"
         working-directory: "./tests"
+      - run: "git restore ."
       - if: env.NPM_TAG != 'latest'
         run: 'npm config set preid "${{ env.NPM_TAG }}"'
       - run: "npm version ${{ env.VERSION_TYPE }}"
