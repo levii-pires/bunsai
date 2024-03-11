@@ -47,7 +47,7 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - run: "bun install"
+      - run: "bun install && bun link"
       - run: "bun install && bun test"
         working-directory: "./tests"
       - if: env.NPM_TAG != 'latest'
