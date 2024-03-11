@@ -1,11 +1,12 @@
 import type { Server } from "bun";
-import type { Extname, LoaderMap, BunSaiOptions } from "./types";
+import type { Extname, LoaderMap, BunSaiOptions, UserConfig } from "./types";
 import { extname } from "path";
 import { getStatic } from "./internals/static";
 import { initLoaders } from "./internals/loaders";
 import { LoaderNotFoundError } from "./internals/errors";
 import { build } from "./internals/build";
 import BunSai from "./bunsai-core";
+import { userConf2Options } from "./internals/userConf2Options";
 
 export default class BunSaiDev extends BunSai {
   readonly loaders: LoaderMap = new Map();
@@ -114,6 +115,12 @@ export default class BunSaiDev extends BunSai {
   static async build(options: BunSaiOptions) {
     const instance = await this.init(options);
     await instance.$build();
+  }
+
+  static override async fromUserConfig(userConfig?: UserConfig) {
+    const options = await userConf2Options(userConfig || {});
+
+    return this.init(options);
   }
 }
 

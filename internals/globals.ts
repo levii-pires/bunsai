@@ -31,7 +31,7 @@ async function getUserConfig() {
 export const serverEntrypointFilename = ".server-entrypoint.js";
 export const userConfig = await getUserConfig();
 export const outputFolder = userConfig?.output || "./bunsai-build";
-export const manifestFilename = ".bunsai-manifest.json";
+export const manifestFilename = ".build-manifest.json";
 
 export async function getUserConfigFilePath() {
   if (configFilePath) return configFilePath;

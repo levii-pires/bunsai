@@ -11,9 +11,9 @@ const module = `
   import { relative } from "path";
   import FilenameParser from "bunsai/internals/filename";
 
-  const { outputFolder, userConfig } = global.BunSai;
+  const { dir, userConfig } = global.BunSai;
 
-  const env = (global.NunjucksEnv ||= configure(outputFolder, userConfig?.nunjucks)); 
+  const env = (global.NunjucksEnv ||= configure(dir, userConfig?.nunjucks)); 
 
   export default {
     handler(data){
@@ -25,7 +25,7 @@ const module = `
       const parser = new FilenameParser(data.route.filePath);
 
       env
-        .getTemplate(relative(outputFolder, parser.replace("${njkFilename}")))
+        .getTemplate(relative(dir, parser.replace("${njkFilename}")))
         .render(data, (err, result) => {
           if (err) {
             reject(err);

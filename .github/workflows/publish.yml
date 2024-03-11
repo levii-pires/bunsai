@@ -1,5 +1,9 @@
 name: Publish
+
 on:
+  push:
+    branches: dev
+
   workflow_dispatch:
     inputs:
       version_type:
@@ -22,16 +26,20 @@ on:
           - alpha
           - beta
 
+env:
+  NPM_TAG: ${{ github.event.inputs.npm_tag || 'canary' }}
+  VERSION_TYPE: ${{ github.event.inputs.version_type || 'prerelease' }}
+
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       actions: write
     steps:
-      - run: 'git config --global user.email "github-actions[bot]"'
-      - run: 'git config --global user.name "github-actions[bot]@users.noreply.github.com"'
+      - run: 'git config --global user.email "github-actions[bot]@users.noreply.github.com"'
+      - run: 'git config --global user.name "github-actions[bot]"'
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
@@ -39,9 +47,12 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - if: github.event.inputs.npm_tag != 'latest'
-        run: 'npm config set preid "${{ github.event.inputs.npm_tag }}"'
-      - run: "npm version ${{ github.event.inputs.version_type }}"
+      - run: "bun install"
+      - run: "bun install && bun test"
+        working-directory: "./tests"
+      - if: env.NPM_TAG != 'latest'
+        run: 'npm config set preid "${{ env.NPM_TAG }}"'
+      - run: "npm version ${{ env.VERSION_TYPE }}"
       - uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -49,7 +60,4 @@ jobs:
       - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
-          tag: ${{ github.event.inputs.npm_tag }}
-      - run: "bun install"
-      - run: "bun install && bun test"
-        working-directory: "./tests"
+          tag: ${{ env.NPM_TAG }}

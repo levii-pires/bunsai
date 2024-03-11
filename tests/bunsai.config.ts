@@ -1,9 +1,9 @@
 import type { UserConfig } from "bunsai";
 
 const options: UserConfig = {
-  middlewares: ["bunsai/middlewares/ddos"],
+  middlewares: ["$middlewares/ddos"],
   staticFiles: [".html"],
-  loaders: ["bunsai/loaders/nunjucks"],
+  loaders: ["$loaders/nunjucks"],
 };
 
 export default options;

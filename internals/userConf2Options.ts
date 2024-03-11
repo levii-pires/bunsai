@@ -1,7 +1,7 @@
 import type { UserConfig, BunSaiOptions, AllMiddlewares } from "../types";
 import type { MiddlewareCollection } from "./middleware";
 import type Loader from "./loader";
-import { resolve } from "path";
+import { resolveModule } from "./resolveModule";
 
 interface EvalDeclArgs {
   path: string;
@@ -10,7 +10,7 @@ interface EvalDeclArgs {
 }
 
 async function evalDecl(args: EvalDeclArgs) {
-  const item = (await import(resolve("node_modules", args.path))).default;
+  const item = (await import(resolveModule(args.path))).default;
 
   args.target.push(new item(args.options));
 }

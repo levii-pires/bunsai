@@ -4,11 +4,13 @@ import type {
   ResolvedBunSaiOptions,
   BunSaiMiddlewareRecord,
   BuildManifest,
+  UserConfig,
 } from "./types";
 import MiddlewareChannel from "./internals/middlewareChannel";
 import { resolveOptions } from "./internals/options";
 import { initMiddlewares } from "./internals/middlewares";
 import ModuleLoader from "./loaders/module";
+import { userConf2Options } from "./internals/userConf2Options";
 
 let serverLoader: ModuleLoader | null = null;
 
@@ -124,5 +126,14 @@ export default class BunSai {
 
       return endRes || response;
     };
+  }
+
+  static async fromUserConfig(
+    userConfig?: UserConfig,
+    manifest?: BuildManifest
+  ) {
+    const options = await userConf2Options(userConfig || {});
+
+    return new this(options, manifest);
   }
 }

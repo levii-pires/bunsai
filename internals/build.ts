@@ -3,7 +3,7 @@ import type BunSaiDev from "..";
 import { dirname, extname, relative, resolve, basename } from "path";
 import FSCache from "./fsCache";
 import FilenameParser from "./filename";
-import { rm } from "fs/promises";
+import { rm, cp } from "fs/promises";
 import {
   getUserConfigFilePath,
   manifestFilename,
@@ -27,12 +27,12 @@ ${
     : "const userConfig = {};"
 }
 
-const manifestFilename = "${manifestFilename}";
-const outputFolder = "${outputFolder}";
+const manifest = await Bun.file("${outputFolder}/${manifestFilename}").json();
+const dir = "${resolve(outputFolder).replaceAll("\\", "\\\\")}";
 
-global.BunSai = { userConfig, manifestFilename, outputFolder };
+global.BunSai = { userConfig, manifest, dir };
 
-const { fetch } = new BunSai({ ...userConfig, dir: outputFolder }, await Bun.file(join(outputFolder, manifestFilename)).json());
+const { fetch } = await BunSai.fromUserConfig({ ...userConfig, dir }, manifest);
 
 const server = Bun.serve({
   ...userConfig?.serve,
@@ -44,16 +44,23 @@ console.log(\`Server on: \${server.hostname}:\${server.port}\`);
 `;
 
 export async function build(bunsai: BunSaiDev) {
+  console.log("Build init");
+
   console.time("BunSai build time");
 
-  console.log("Clearing build folder...");
+  console.log("\nClear build folder");
+  console.time("Clear build folder");
 
   await rm(outputFolder, { force: true, recursive: true });
 
+  console.timeEnd("Clear build folder");
+
   const files = Object.values(bunsai.router.routes);
 
-  const browserEntries: string[] = [];
-  const serverEntries: string[] = [];
+  const browserEntries: string[] = [],
+    serverEntries: string[] = [],
+    browserExternal: string[] = [],
+    serverExternal: string[] = [];
 
   const cache = await FSCache.init("build", "@bunsai");
 
@@ -78,14 +85,17 @@ export async function build(bunsai: BunSaiDev) {
       switch (res.type) {
         case "browser": {
           browserEntries.push(await cache.write(outPath, res.content));
+          if (res.external) browserExternal.push(...res.external);
           break;
         }
         case "server": {
           serverEntries.push(await cache.write(outPath, res.content));
+          if (res.external) serverExternal.push(...res.external);
           break;
         }
         default: {
           await Bun.write(outPath, res.content);
+          if (basename(outPath).startsWith(".")) break;
           buildManifest.files[outPath.replaceAll("\\", "/")] = "asset";
           buildManifest.extensions.push(extname(outPath) as Extname);
           break;
@@ -95,7 +105,8 @@ export async function build(bunsai: BunSaiDev) {
   }
 
   if (configFilePath) {
-    console.log("Injecting user config...");
+    console.log("\nInject user config");
+    console.time("Inject user config");
 
     serverEntries.push(
       await cache.write(
@@ -103,9 +114,12 @@ export async function build(bunsai: BunSaiDev) {
         Bun.file(configFilePath)
       )
     );
+
+    console.timeEnd("Inject user config");
   }
 
-  console.log("Injecting server entrypoint...");
+  console.log("\nInject server entrypoint");
+  console.time("Inject server entrypoint");
 
   serverEntries.push(
     await cache.write(
@@ -114,14 +128,18 @@ export async function build(bunsai: BunSaiDev) {
     )
   );
 
-  console.log("Building files...");
+  console.timeEnd("Inject server entrypoint");
 
   if (browserEntries.length > 0) {
+    console.log("\nBuild browser files");
+    console.time("Build browser files");
+
     const { logs, outputs, success } = await Bun.build({
       entrypoints: browserEntries,
       splitting: true,
       target: "browser",
       outdir: outputFolder,
+      external: browserExternal,
       minify: true,
     });
 
@@ -137,14 +155,20 @@ export async function build(bunsai: BunSaiDev) {
         buildManifest.extensions.push(extname(out.path) as Extname);
       }
     }
+
+    console.timeEnd("Build browser files");
   }
 
   if (serverEntries.length > 0) {
+    console.log("\nBuild server files");
+    console.time("Build server files");
+
     const { logs, outputs, success } = await Bun.build({
       entrypoints: serverEntries,
       splitting: true,
       target: "bun",
       outdir: outputFolder,
+      external: serverExternal,
       minify: true,
       naming: { chunk: ".server-[name]-[hash].[ext]" },
     });
@@ -153,12 +177,9 @@ export async function build(bunsai: BunSaiDev) {
       throw new AggregateError(logs, "BunSai build error");
     }
 
-    const tsExt = /\.ts$/;
-
     for (const out of outputs) {
       if (out.kind == "entry-point") {
-        if (basename(out.path).startsWith("."))
-          continue;
+        if (basename(out.path).startsWith(".")) continue;
 
         const fil = resolve(outputFolder, out.path).replaceAll("\\", "/");
 
@@ -167,7 +188,12 @@ export async function build(bunsai: BunSaiDev) {
         buildManifest.extensions.push(extname(out.path) as Extname);
       }
     }
+
+    console.timeEnd("Build server files");
   }
+
+  console.log("\nBuild manifest");
+  console.time("Build manifest");
 
   buildManifest.extensions = Array.from(
     new Set(buildManifest.extensions)
@@ -178,11 +204,40 @@ export async function build(bunsai: BunSaiDev) {
     JSON.stringify(buildManifest)
   );
 
+  console.timeEnd("Build manifest");
+
+  console.log("\nCopying dot-files");
+  console.time("Copying dot-files");
+
+  const glob = new Bun.Glob("**/.*");
+
+  const dots = await Array.fromAsync(
+    glob.scan({
+      cwd: bunsai.options.dir,
+      onlyFiles: false,
+      dot: true,
+    })
+  );
+
+  for (const dot of dots) {
+    await cp(resolve(bunsai.options.dir, dot), resolve(outputFolder, dot), {
+      recursive: true,
+      force: false,
+      errorOnExist: true,
+    });
+  }
+
+  console.timeEnd("Copying dot-files");
+
   console.log();
   console.timeEnd("BunSai build time");
   console.log();
 
-  console.log(await parseAsync(outputFolder));
+  console.log(
+    await parseAsync(outputFolder, {
+      exclude: /node_modules(\\|\/).*?(\\|\/).*?/,
+    })
+  );
 
   console.log(`\nNow run 'bun ${outputFolder}/${serverEntrypointFilename}'`);
 }
