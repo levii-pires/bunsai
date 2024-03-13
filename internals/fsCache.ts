@@ -1,6 +1,7 @@
 import { RmOptions, watch } from "fs";
 import { mkdir, rm } from "fs/promises";
 import { join, parse } from "path";
+import { SafeBunFile } from "./safeBunFile";
 
 type WriteInput =
   | string
@@ -47,7 +48,7 @@ export default class FSCache {
    * @param filename Absolute original file path
    */
   file(filename: string, options?: BlobPropertyBag) {
-    return Bun.file(this.getCachePath(filename), options);
+    return SafeBunFile(this.getCachePath(filename), options);
   }
 
   /**
@@ -77,19 +78,8 @@ export default class FSCache {
    * - `[null, null]` => File not found
    * - `[null, error]` => Something went wrong
    */
-  async load(
-    filename: string,
-    options?: BlobPropertyBag
-  ): Promise<[ArrayBuffer, null] | [null, ErrnoException | null]> {
-    const file = this.file(filename, options);
-
-    try {
-      return [await file.arrayBuffer(), null];
-    } catch (error) {
-      if ((error as ErrnoException).code == "ENOENT") return [null, null];
-
-      return [null, error as ErrnoException];
-    }
+  async load(filename: string, options?: BlobPropertyBag) {
+    return this.file(filename, options).arrayBuffer();
   }
 
   /**

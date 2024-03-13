@@ -117,8 +117,11 @@ export default class BunSaiDev extends BunSai {
     await instance.$build();
   }
 
-  static override async fromUserConfig(userConfig?: UserConfig) {
-    const options = await userConf2Options(userConfig || {});
+  static override async fromUserConfig(
+    userConfig: UserConfig = {},
+    userConfigFilePath = ""
+  ) {
+    const options = await userConf2Options(userConfig, userConfigFilePath);
 
     return this.init(options);
   }

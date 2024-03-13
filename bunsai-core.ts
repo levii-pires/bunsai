@@ -37,6 +37,8 @@ export default class BunSai {
   ) {
     this.options = resolveOptions(options);
 
+    this.options.dev = false; // this function is meant to run on production
+
     const fileExtensions = manifest
       ? manifest.extensions
       : this.options.staticFiles.concat(
@@ -53,8 +55,6 @@ export default class BunSai {
   }
 
   protected async $fetch(request: Request, server: Server) {
-    this.options.dev = false; // this function is meant to run on production
-
     try {
       if (!this.manifest)
         throw new Error(
@@ -129,10 +129,11 @@ export default class BunSai {
   }
 
   static async fromUserConfig(
-    userConfig?: UserConfig,
+    userConfig: UserConfig = {},
+    userConfigFilePath = "",
     manifest?: BuildManifest
   ) {
-    const options = await userConf2Options(userConfig || {});
+    const options = await userConf2Options(userConfig, userConfigFilePath);
 
     return new this(options, manifest);
   }

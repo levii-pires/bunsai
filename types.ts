@@ -20,15 +20,6 @@ export interface BuildResult {
    */
   type: "server" | "browser" | "asset";
   plugins?: BunPlugin[];
-  /**
-   * Which dependencies should not be bundled?
-   *
-   * It is not recommended to declare external deps when `type: 'browser'`,
-   * as BunSai does not serve files from node_modules.
-   *
-   * Assets are not bundled.
-   */
-  external?: string[];
   content: Blob | NodeJS.TypedArray | ArrayBufferLike | string | Bun.BlobPart[];
 }
 

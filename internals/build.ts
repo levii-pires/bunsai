@@ -5,7 +5,7 @@ import FSCache from "./fsCache";
 import FilenameParser from "./filename";
 import { rm, cp } from "fs/promises";
 import {
-  getUserConfigFilePath,
+  userConfigFilePath,
   manifestFilename,
   outputFolder,
   serverEntrypointFilename,
@@ -13,16 +13,16 @@ import {
 import { parseAsync } from "dree";
 import { version } from "../package.json";
 
-const configFilePath = await getUserConfigFilePath();
-
-const configFilename = configFilePath ? "." + basename(configFilePath) : void 0;
+const configFilename = userConfigFilePath
+  ? "." + basename(userConfigFilePath)
+  : void 0;
 
 const indexModule = `
 import BunSai from "bunsai/bunsai-core";
 import { join } from "path";
 
 ${
-  configFilePath
+  userConfigFilePath
     ? `import userConfig from "./${configFilename}";`
     : "const userConfig = {};"
 }
@@ -32,7 +32,9 @@ const dir = "${resolve(outputFolder).replaceAll("\\", "\\\\")}";
 
 global.BunSai = { userConfig, manifest, dir };
 
-const { fetch } = await BunSai.fromUserConfig({ ...userConfig, dir }, manifest);
+const { fetch } = await BunSai.fromUserConfig({ ...userConfig, dir }, "${
+  userConfigFilePath || ""
+}", manifest);
 
 const server = Bun.serve({
   ...userConfig?.serve,
@@ -58,9 +60,7 @@ export async function build(bunsai: BunSaiDev) {
   const files = Object.values(bunsai.router.routes);
 
   const browserEntries: string[] = [],
-    serverEntries: string[] = [],
-    browserExternal: string[] = [],
-    serverExternal: string[] = [];
+    serverEntries: string[] = [];
 
   const cache = await FSCache.init("build", "@bunsai");
 
@@ -85,12 +85,10 @@ export async function build(bunsai: BunSaiDev) {
       switch (res.type) {
         case "browser": {
           browserEntries.push(await cache.write(outPath, res.content));
-          if (res.external) browserExternal.push(...res.external);
           break;
         }
         case "server": {
           serverEntries.push(await cache.write(outPath, res.content));
-          if (res.external) serverExternal.push(...res.external);
           break;
         }
         default: {
@@ -104,14 +102,14 @@ export async function build(bunsai: BunSaiDev) {
     }
   }
 
-  if (configFilePath) {
+  if (userConfigFilePath) {
     console.log("\nInject user config");
     console.time("Inject user config");
 
     serverEntries.push(
       await cache.write(
         resolve(outputFolder, configFilename!),
-        Bun.file(configFilePath)
+        Bun.file(userConfigFilePath)
       )
     );
 
@@ -139,7 +137,6 @@ export async function build(bunsai: BunSaiDev) {
       splitting: true,
       target: "browser",
       outdir: outputFolder,
-      external: browserExternal,
       minify: true,
     });
 
@@ -168,7 +165,6 @@ export async function build(bunsai: BunSaiDev) {
       splitting: true,
       target: "bun",
       outdir: outputFolder,
-      external: serverExternal,
       minify: true,
       naming: { chunk: ".server-[name]-[hash].[ext]" },
     });
