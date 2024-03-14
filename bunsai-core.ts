@@ -37,7 +37,7 @@ export default class BunSai {
   ) {
     this.options = resolveOptions(options);
 
-    this.options.dev = false; // this function is meant to run on production
+    if (manifest) this.options.dev = false; // if we got a manifest then it should not be in dev mode
 
     const fileExtensions = manifest
       ? manifest.extensions

@@ -11,6 +11,7 @@ import { evalUserConfig } from "./internals/evalUserConfig";
 export default class BunSaiDev extends BunSai {
   readonly loaders: LoaderMap = new Map();
   protected $ready = Promise.withResolvers<void>();
+  override manifest: null = null;
 
   constructor(options: BunSaiOptions) {
     super(options);
