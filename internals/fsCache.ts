@@ -73,8 +73,10 @@ export default class FSCache {
    * Load the file as an ArrayBuffer.
    *
    * @param filename Absolute original file path
-   * @returns Possible return values:
-   * - `[arrayBuffer, null]` => No problems here
+   * @returns
+   * Possible return values:
+   *
+   * - `[ArrayBuffer, null]` => No problems here
    * - `[null, null]` => File not found
    * - `[null, error]` => Something went wrong
    */

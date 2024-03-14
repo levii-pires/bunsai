@@ -1,23 +1,58 @@
 import type { BunFile } from "bun";
 
-async function callWrapper<T>(
-  call: () => Promise<T>
-): Promise<FailsafeReturn<T>> {
-  try {
-    return [await call(), null];
-  } catch (error) {
-    if ((error as ErrnoException).code == "ENOENT") return [null, null];
+function wrapSafe<T>(call: () => Promise<T>): () => Promise<FailsafeReturn<T>> {
+  return async () => {
+    try {
+      return [await call(), null];
+    } catch (error) {
+      if ((error as ErrnoException).code == "ENOENT") return [null, null];
 
-    return [null, error as ErrnoException];
-  }
+      return [null, error as ErrnoException];
+    }
+  };
 }
 
 type FailsafeReturn<T> = [T, null] | [null, null | ErrnoException];
-export interface SafeBunFile
-  extends Omit<BunFile, "arrayBuffer" | "formData" | "json" | "text"> {
+export interface SafeBunFile {
+  /**
+   * The underlying BunFile object
+   */
+  file: BunFile;
+  /**
+   * @returns
+   * Possible return values:
+   *
+   * - `[ArrayBuffer, null]` => No problems here
+   * - `[null, null]` => File not found
+   * - `[null, error]` => Something went wrong
+   */
   arrayBuffer(): Promise<FailsafeReturn<ArrayBuffer>>;
+  /**
+   * @returns
+   * Possible return values:
+   *
+   * - `[FormData, null]` => No problems here
+   * - `[null, null]` => File not found
+   * - `[null, error]` => Something went wrong
+   */
   formData(): Promise<FailsafeReturn<FormData>>;
-  json(): Promise<FailsafeReturn<any>>;
+  /**
+   * @returns
+   * Possible return values:
+   *
+   * - `[JSON, null]` => No problems here
+   * - `[null, null]` => File not found
+   * - `[null, error]` => Something went wrong
+   */
+  json<T = any>(): Promise<FailsafeReturn<T>>;
+  /**
+   * @returns
+   * Possible return values:
+   *
+   * - `[String, null]` => No problems here
+   * - `[null, null]` => File not found
+   * - `[null, error]` => Something went wrong
+   */
   text(): Promise<FailsafeReturn<string>>;
 }
 
@@ -35,18 +70,11 @@ export function SafeBunFile(
 ): SafeBunFile;
 export function SafeBunFile(path: any, options?: BlobPropertyBag): SafeBunFile {
   const file = Bun.file(path, options);
-  return Object.assign(file, {
-    arrayBuffer() {
-      return callWrapper(() => file.arrayBuffer());
-    },
-    formData() {
-      return callWrapper(() => file.formData());
-    },
-    json() {
-      return callWrapper(() => file.json());
-    },
-    text() {
-      return callWrapper(() => file.text());
-    },
-  });
+  return {
+    file,
+    arrayBuffer: wrapSafe(() => file.arrayBuffer()),
+    formData: wrapSafe(() => file.formData()),
+    json: wrapSafe(() => file.json()),
+    text: wrapSafe(() => file.text()),
+  };
 }
