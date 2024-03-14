@@ -1,4 +1,4 @@
-import type BunSai from "../bunsai-core";
+import type BunSai from "../core";
 import type { AllMiddlewares } from "../types";
 import Middleware, { MiddlewareCollection } from "./middleware";
 

@@ -5,7 +5,7 @@ import { getStatic } from "./internals/static";
 import { initLoaders } from "./internals/loaders";
 import { LoaderNotFoundError } from "./internals/errors";
 import { build } from "./internals/build";
-import BunSai from "./bunsai-core";
+import BunSai from "./core";
 import { evalUserConfig } from "./internals/evalUserConfig";
 
 export default class BunSaiDev extends BunSai {
