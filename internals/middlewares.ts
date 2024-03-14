@@ -1,6 +1,6 @@
 import type BunSai from "../core";
 import type { AllMiddlewares } from "../types";
-import Middleware, { MiddlewareCollection } from "./middleware";
+import { MiddlewareCollection } from "./middleware";
 
 function insert(middleware: AllMiddlewares, bunsai: BunSai) {
   bunsai.middlewares[middleware.runsOn].add(
