@@ -1,8 +1,5 @@
 import type { MatchedRoute, Server } from "bun";
-import type {
-  BunSaiMiddlewareRecord,
-  MiddlewareRunnerWithThis,
-} from "../types";
+import type { BunSaiEventsRecord, MiddlewareRunnerWithThis } from "../types";
 import { Middleware, MiddlewareRecord } from "../internals";
 
 export interface CORSOptions {
@@ -206,7 +203,7 @@ export default function CORS(options: CORSOptions = {}) {
 }
 
 CORS.inject = (
-  middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
+  middlewares: MiddlewareRecord<BunSaiEventsRecord>,
   options: CORSOptions = {}
 ) => {
   const preflight = CORSPreflight.inject(middlewares, options);

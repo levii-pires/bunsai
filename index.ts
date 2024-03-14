@@ -4,7 +4,7 @@ import type {
   LoaderMap,
   BunSaiOptions,
   ResolvedBunSaiOptions,
-  BunSaiMiddlewareRecord,
+  BunSaiEventsRecord,
 } from "./types";
 import { extname } from "path";
 import * as Internals from "./internals";
@@ -14,7 +14,7 @@ export default class BunSai {
   readonly routeLoaders: LoaderMap = {};
   readonly options: ResolvedBunSaiOptions;
   readonly middlewares =
-    Internals.MiddlewareChannel.createRecord<BunSaiMiddlewareRecord>([
+    Internals.MiddlewareChannel.createRecord<BunSaiEventsRecord>([
       "notFound",
       "request",
       "response",

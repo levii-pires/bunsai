@@ -1,12 +1,12 @@
 import type {
-  BunSaiMiddlewareRecord,
+  BunSaiEventsRecord,
   IMiddleware,
   MiddlewareRunnerWithThis,
 } from "../types";
 import { inject } from "./inject";
 
 export abstract class Middleware<
-  Runs extends keyof BunSaiMiddlewareRecord = keyof BunSaiMiddlewareRecord
+  Runs extends keyof BunSaiEventsRecord = keyof BunSaiEventsRecord
 > implements IMiddleware<Runs>
 {
   abstract name: string;
@@ -21,7 +21,7 @@ export abstract class Middleware<
    * Here comes the actual middleware logic.
    */
   protected abstract $runner: MiddlewareRunnerWithThis<
-    BunSaiMiddlewareRecord[Runs]
+    BunSaiEventsRecord[Runs]
   >;
 
   static inject = inject;

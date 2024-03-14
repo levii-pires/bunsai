@@ -1,4 +1,4 @@
-import type { AllMiddlewares, BunSaiMiddlewareRecord } from "..";
+import type { AllMiddlewares, BunSaiEventsRecord } from "..";
 import type { Middleware } from "./middleware";
 import type { MiddlewareRecord } from "./middlewareChannel";
 
@@ -10,7 +10,7 @@ import type { MiddlewareRecord } from "./middlewareChannel";
 
 export function inject<Host extends new (...args: any[]) => AllMiddlewares>(
   this: Host,
-  middlewares: MiddlewareRecord<BunSaiMiddlewareRecord>,
+  middlewares: MiddlewareRecord<BunSaiEventsRecord>,
   ...args: ConstructorParameters<Host>
 ) {
   const instance = new this(...args);
