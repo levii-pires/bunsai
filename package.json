@@ -1,29 +1,18 @@
 {
   "name": "bunsai",
-  "version": "0.3.0",
-  "description": "Full-stack agnostic framework for the web, built upon Bun.",
+  "version": "0.5.0",
   "author": "Mateus Pires",
   "repository": "levii-pires/bunsai",
-  "keywords": [
-    "bun",
-    "next"
-  ],
-  "bugs": {
-    "url": "https://github.com/levii-pires/bunsai/issues"
-  },
   "module": "./index.ts",
   "devDependencies": {
     "@types/bun": "^1.0.6",
     "@types/node": "^20.11.14",
     "typescript": "^5.3.3"
   },
-  "optionalDependencies": {
-    "@types/nunjucks": "^3.2.6",
-    "@types/stylus": "^0.48.42",
-    "nunjucks": "^3.2.4",
-    "sass": "^1.70.0",
-    "stylus": "^0.62.0"
+  "bugs": {
+    "url": "https://github.com/levii-pires/bunsai/issues"
   },
+  "description": "Full-stack agnostic framework for the web, built upon Bun.",
   "engines": {
     "bun": ">=1.0.26"
   },
@@ -36,7 +25,14 @@
     "middlewares",
     "util"
   ],
+  "keywords": [
+    "bun",
+    "next"
+  ],
   "license": "MIT",
   "private": false,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "typed-emitter": "^2.1.0"
+  }
 }
