@@ -10,7 +10,7 @@ import MiddlewareChannel from "./internals/middlewareChannel";
 import { resolveOptions } from "./internals/options";
 import { initMiddlewares } from "./internals/middlewares";
 import ModuleLoader from "./loaders/module";
-import { userConf2Options } from "./internals/userConf2Options";
+import { evalUserConfig } from "./internals/evalUserConfig";
 
 let serverLoader: ModuleLoader | null = null;
 
@@ -117,14 +117,29 @@ export default class BunSai {
     const that = this;
 
     return async function (this: Server, request: Request) {
-      const response = await that.$fetch(request, this);
+      try {
+        const response = await that.$fetch(request, this);
 
-      const endRes = await that.middlewares.end.call(
-        { response, request, server: this },
-        that.options.dev
-      );
+        const endRes = await that.middlewares.end.call(
+          { response, request, server: this },
+          that.options.dev
+        );
 
-      return endRes || response;
+        return endRes || response;
+      } catch (error) {
+        const errResult = await that.middlewares.error.call(
+          {
+            error,
+            request,
+            server: this,
+          },
+          that.options.dev
+        );
+
+        if (errResult) return errResult;
+
+        throw error;
+      }
     };
   }
 
@@ -133,7 +148,7 @@ export default class BunSai {
     userConfigFilePath = "",
     manifest?: BuildManifest
   ) {
-    const options = await userConf2Options(userConfig, userConfigFilePath);
+    const { options } = await evalUserConfig(userConfig, userConfigFilePath);
 
     return new this(options, manifest);
   }

@@ -6,7 +6,7 @@ import { initLoaders } from "./internals/loaders";
 import { LoaderNotFoundError } from "./internals/errors";
 import { build } from "./internals/build";
 import BunSai from "./bunsai-core";
-import { userConf2Options } from "./internals/userConf2Options";
+import { evalUserConfig } from "./internals/evalUserConfig";
 
 export default class BunSaiDev extends BunSai {
   readonly loaders: LoaderMap = new Map();
@@ -33,65 +33,50 @@ export default class BunSaiDev extends BunSai {
   }
 
   protected override async $fetch(request: Request, server: Server) {
-    try {
-      const reqResult = await this.middlewares.request.call(
-        { request, server },
-        this.options.dev
-      );
+    const reqResult = await this.middlewares.request.call(
+      { request, server },
+      this.options.dev
+    );
 
-      if (reqResult) return reqResult;
+    if (reqResult) return reqResult;
 
-      const route = this.router.match(request);
+    const route = this.router.match(request);
 
-      if (!route) {
-        const nfMidResult = await this.middlewares.notFound.call(
-          {
-            request,
-            server,
-          },
-          this.options.dev
-        );
-
-        return nfMidResult || new Response(null, { status: 404 });
-      }
-
-      const loader = this.loaders.get(
-        extname(route.filePath).toLowerCase() as Extname
-      );
-
-      if (!loader) throw new LoaderNotFoundError(request);
-
-      const response = await loader.handle(route.filePath, {
-        server,
-        request,
-        route,
-      });
-
-      const resResult = await this.middlewares.response.call(
+    if (!route) {
+      const nfMidResult = await this.middlewares.notFound.call(
         {
-          route,
-          response,
           request,
           server,
         },
         this.options.dev
       );
 
-      return resResult || response;
-    } catch (error) {
-      const errResult = await this.middlewares.error.call(
-        {
-          error,
-          request,
-          server,
-        },
-        this.options.dev
-      );
-
-      if (errResult) return errResult;
-
-      throw error;
+      return nfMidResult || new Response(null, { status: 404 });
     }
+
+    const loader = this.loaders.get(
+      extname(route.filePath).toLowerCase() as Extname
+    );
+
+    if (!loader) throw new LoaderNotFoundError(request);
+
+    const response = await loader.handle(route.filePath, {
+      server,
+      request,
+      route,
+    });
+
+    const resResult = await this.middlewares.response.call(
+      {
+        route,
+        response,
+        request,
+        server,
+      },
+      this.options.dev
+    );
+
+    return resResult || response;
   }
 
   get setup() {
@@ -121,7 +106,7 @@ export default class BunSaiDev extends BunSai {
     userConfig: UserConfig = {},
     userConfigFilePath = ""
   ) {
-    const options = await userConf2Options(userConfig, userConfigFilePath);
+    const { options } = await evalUserConfig(userConfig, userConfigFilePath);
 
     return this.init(options);
   }
