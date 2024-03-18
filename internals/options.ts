@@ -5,6 +5,6 @@ export function resolveOptions(options: BunSaiOptions): ResolvedBunSaiOptions {
     staticFiles: options.staticFiles || [],
     router: options.router || {},
     loaders: options.loaders || [],
-    middlewares: options.middlewares || [],
+    cache: options.cache || {},
   };
 }

@@ -10,21 +10,45 @@ type WriteInput =
   | ArrayBufferLike
   | Bun.BlobPart[];
 
-export class FSCache {
+export interface FSCacheOptions {
+  events: EventEmitter;
   /**
-   * @param dev If `true`, the cache will watch the source file for changes,
+   * If `true`, the cache will watch the source file for changes,
+   * removing the corresponding cache file when any change occurs and allowing
+   * any re-render logic that relies on `FSCache#file(...).exists()`
+   */
+  dev: boolean;
+  /**
+   * @default process.env.CACHE_FOLDER || "./.bunsai"
+   */
+  root?: string;
+  /**
+   * @default process.env.PRESERVE_CACHE == "true"
+   */
+  preserveCache?: boolean;
+}
+
+export class FSCache {
+  events: EventEmitter;
+  dev: boolean;
+  root: string;
+  preserveCache: boolean;
+  /**
+   * @param options.dev If `true`, the cache will watch the source file for changes,
    * removing the corresponding cache file when any change occurs and allowing
    * any re-render logic that relies on `FSCache#file(...).exists()`
    * @param root Default: `process.env.CACHE_FOLDER || "./.bunsai"`
    * @param preserveCache Default: `process.env.PRESERVE_CACHE == "true"`
    */
-  constructor(
-    public events: EventEmitter,
-    public dev?: boolean,
-    public root = process.env.CACHE_FOLDER || "./.bunsai",
-    preserveCache = process.env.PRESERVE_CACHE == "true"
-  ) {
-    if (!preserveCache) rmSync(root, { force: true, recursive: true });
+  constructor(options: FSCacheOptions) {
+    this.events = options.events;
+    this.dev = options.dev;
+    this.root = options.root || process.env.CACHE_FOLDER || "./.bunsai";
+    this.preserveCache =
+      options.preserveCache ?? process.env.PRESERVE_CACHE == "true";
+
+    if (!this.preserveCache)
+      rmSync(this.root, { force: true, recursive: true });
   }
 
   private getCachePath(filename: string) {
@@ -36,8 +60,8 @@ export class FSCache {
    * Should be called before all other operations
    */
   async setup() {
-    await this.events.emit("cache.user.setup", { cache: this, server: null });
     await mkdir(this.root, { recursive: true });
+    await this.events.emit("cache.user.setup", { cache: this, server: null });
   }
 
   /**
@@ -65,7 +89,7 @@ export class FSCache {
     if (this.dev) {
       watch(filename, { persistent: true }, async () => {
         await rm(cachePath, { force: true });
-        await this.events.emit("cache.user.write", {
+        await this.events.emit("cache.watch.invalidate", {
           cache: this,
           server: null,
           cachedFilePath: cachePath,
@@ -78,9 +102,16 @@ export class FSCache {
   /**
    * @param filename Absolute original file path
    */
-  invalidate(filename: string, options?: Omit<RmOptions, "force">) {
+  async invalidate(filename: string, options?: Omit<RmOptions, "force">) {
     const cachePath = this.getCachePath(filename);
 
-    return rm(cachePath, { ...options, force: true });
+    await rm(cachePath, { ...options, force: true });
+
+    await this.events.emit("cache.user.invalidate", {
+      cache: this,
+      server: null,
+      cachedFilePath: cachePath,
+      originalFilePath: filename,
+    });
   }
 }

@@ -18,7 +18,7 @@ export class EventEmitter {
     "lifecycle.init": new Map(),
     "lifecycle.reload": new Map(),
     "lifecycle.shutdown": new Map(),
-    "cache.system.invalidate": new Map(),
+    "cache.watch.invalidate": new Map(),
     "cache.user.write": new Map(),
     "cache.user.setup": new Map(),
     "cache.user.invalidate": new Map(),

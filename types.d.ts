@@ -1,7 +1,7 @@
 import type { MatchedRoute, Server } from "bun";
 import type BunSai from ".";
-import type { FSCache } from "./internals";
-import { ParsedPath } from "path";
+import type { FSCache, FSCacheOptions } from "./internals";
+import type { ParsedPath } from "path";
 
 declare global {
   type Extname = `.${Lowercase<string>}`;
@@ -28,12 +28,12 @@ declare global {
 
     interface RequestPayload extends GenericPayload {
       request: Request;
-      response: GetterSetter<Response | null>;
+      response: GetterSetter<Response>;
     }
 
     interface RequestLoadPayload extends RequestPayload {
       route: MatchedRoute;
-      filePath: ParsedPath;
+      path: ParsedPath;
     }
 
     interface EndedPayload extends RequestPayload {}
@@ -68,16 +68,19 @@ declare global {
       "lifecycle.reload": EventHandler<LifecyclePayload>;
       "lifecycle.shutdown": EventHandler<LifecyclePayload>;
 
-      "cache.system.invalidate": EventHandler<CachePayload>;
-      "cache.user.write": EventHandler<CachePayload>;
+      "cache.watch.invalidate": EventHandler<Required<CachePayload>>;
+      "cache.user.write": EventHandler<Required<CachePayload>>;
       "cache.user.setup": EventHandler<CachePayload>;
-      "cache.user.invalidate": EventHandler<CachePayload>;
+      "cache.user.invalidate": EventHandler<Required<CachePayload>>;
     };
   }
 
   interface BunSaiLoader {
     extensions: Extname[];
     setup(bunsai: BunSai): void | Promise<void>;
+    load(
+      payload: Omit<BunSaiEvents.RequestLoadPayload, "break" | "response">
+    ): Response | Promise<Response>;
   }
 
   interface BunSaiOptions {
@@ -98,6 +101,8 @@ declare global {
       ConstructorParameters<typeof Bun.FileSystemRouter>[0],
       "style" | "fileExtensions" | "dir"
     >;
+
+    cache?: Omit<FSCacheOptions, "events" | "dev">;
 
     staticFiles?: Extname[];
 
