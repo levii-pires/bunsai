@@ -1,118 +1,87 @@
-type Listener = BunSaiTypes.EventHandler<any>;
+type Listener = BunSaiEvents.EventHandler<any>;
+
+interface ListenerMetadata {
+  once: boolean;
+}
 
 export class EventEmitter {
-  private $listeners: Record<keyof BunSaiTypes.EventMap, Listener[]> = {
-    "lifecycle.init": [],
-    "lifecycle.reload": [],
-    "lifecycle.shutdown": [],
-    "request.end": [],
-    "request.error": [],
-    "request.init": [],
-    "request.notFound": [],
-    "request.response": [],
+  private $listeners: Record<
+    keyof BunSaiEvents.EventMap,
+    Map<Listener, ListenerMetadata>
+  > = {
+    "request.init": new Map(),
+    "request.load": new Map(),
+    "request.notFound": new Map(),
+    "request.loaded": new Map(),
+    "request.end": new Map(),
+    "request.error": new Map(),
+    "lifecycle.init": new Map(),
+    "lifecycle.reload": new Map(),
+    "lifecycle.shutdown": new Map(),
+    "cache.system.invalidate": new Map(),
+    "cache.user.write": new Map(),
+    "cache.user.setup": new Map(),
+    "cache.user.invalidate": new Map(),
   };
 
-  private $onceListeners: Record<keyof BunSaiTypes.EventMap, Listener[]> = {
-    "lifecycle.init": [],
-    "lifecycle.reload": [],
-    "lifecycle.shutdown": [],
-    "request.end": [],
-    "request.error": [],
-    "request.init": [],
-    "request.notFound": [],
-    "request.response": [],
-  };
-
-  addListener<E extends keyof BunSaiTypes.EventMap>(
+  addListener<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    listener: BunSaiTypes.EventMap[E]
-  ): this {
-    this.$listeners[event].push(listener);
+    listener: BunSaiEvents.EventMap[E]
+  ) {
+    this.$listeners[event].set(listener, { once: false });
 
     return this;
   }
 
-  on<E extends keyof BunSaiTypes.EventMap>(
+  on<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    listener: BunSaiTypes.EventMap[E]
-  ): this {
+    listener: BunSaiEvents.EventMap[E]
+  ) {
     return this.addListener(event, listener);
   }
 
-  once<E extends keyof BunSaiTypes.EventMap>(
+  once<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    listener: BunSaiTypes.EventMap[E]
-  ): this {
-    this.$onceListeners[event].push(listener);
+    listener: BunSaiEvents.EventMap[E]
+  ) {
+    this.$listeners[event].set(listener, { once: true });
 
     return this;
   }
 
-  prependListener<E extends keyof BunSaiTypes.EventMap>(
+  off<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    listener: BunSaiTypes.EventMap[E]
-  ): this {
-    this.$listeners[event].unshift(listener);
-
-    return this;
+    listener: BunSaiEvents.EventMap[E]
+  ) {
+    return this.removeListener(event, listener);
   }
 
-  prependOnceListener<E extends keyof BunSaiTypes.EventMap>(
-    event: E,
-    listener: BunSaiTypes.EventMap[E]
-  ): this {
-    this.$onceListeners[event].unshift(listener);
-
-    return this;
-  }
-
-  off<E extends keyof BunSaiTypes.EventMap>(
-    event: E,
-    listener: BunSaiTypes.EventMap[E],
-    once?: boolean
-  ): this {
-    return this.removeListener(event, listener, once);
-  }
-
-  removeAllListeners<E extends keyof BunSaiTypes.EventMap>(event?: E): this {
+  removeAllListeners<E extends keyof BunSaiEvents.EventMap>(event?: E) {
     if (event) {
-      this.$listeners[event] = [];
-      this.$onceListeners[event] = [];
+      this.$listeners[event].clear();
 
       return this;
     }
 
-    for (const key of Object.keys(this.$listeners) as any) {
-      this.removeAllListeners(key);
-    }
-
-    for (const key of Object.keys(this.$onceListeners) as any) {
-      this.removeAllListeners(key);
+    for (const key of this.eventNames()) {
+      this.$listeners[key].clear();
     }
 
     return this;
   }
 
-  removeListener<E extends keyof BunSaiTypes.EventMap>(
+  removeListener<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    listener: BunSaiTypes.EventMap[E],
-    once?: boolean
-  ): this {
-    if (!once)
-      this.$listeners[event] = this.$listeners[event].filter(
-        (l) => l !== listener
-      );
-
-    this.$onceListeners[event] = this.$onceListeners[event].filter(
-      (l) => l !== listener
-    );
+    listener: BunSaiEvents.EventMap[E]
+  ) {
+    this.$listeners[event].delete(listener);
 
     return this;
   }
 
-  async emit<E extends keyof BunSaiTypes.EventMap>(
+  async emit<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    payload: Omit<Parameters<BunSaiTypes.EventMap[E]>[0], "break">
+    payload: Omit<Parameters<BunSaiEvents.EventMap[E]>[0], "break">
   ) {
     let shouldBreak = false;
 
@@ -120,28 +89,20 @@ export class EventEmitter {
       shouldBreak = true;
     }
 
-    for (const listener of this.$listeners[event]) {
-      // @ts-ignore
+    for (const [listener, metadata] of this.$listeners[event]) {
       await listener({ ...payload, break: _break });
 
-      if (shouldBreak) break;
-    }
-
-    for (const listener of this.$onceListeners[event]) {
-      // @ts-ignore
-      await listener({ ...payload, break: _break });
-
-      this.removeListener(event, listener, true);
+      if (metadata.once) this.removeListener(event, listener);
 
       if (shouldBreak) break;
     }
   }
 
-  eventNames(): (string | symbol)[] {
-    return Object.keys(this.$listeners);
+  eventNames() {
+    return Object.keys(this.$listeners) as (keyof BunSaiEvents.EventMap)[];
   }
 
-  listenerCount<E extends keyof BunSaiTypes.EventMap>(event: E): number {
-    return this.$listeners[event].length + this.$onceListeners[event].length;
+  listenerCount<E extends keyof BunSaiEvents.EventMap>(event: E) {
+    return this.$listeners[event].size;
   }
 }

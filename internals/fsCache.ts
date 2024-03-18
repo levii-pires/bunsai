@@ -1,6 +1,7 @@
-import { RmOptions, watch } from "fs";
+import type { EventEmitter } from "./eventEmitter";
+import { RmOptions, watch, rmSync } from "fs";
 import { mkdir, rm } from "fs/promises";
-import { join, basename } from "path";
+import { join, parse } from "path";
 
 type WriteInput =
   | string
@@ -9,36 +10,34 @@ type WriteInput =
   | ArrayBufferLike
   | Bun.BlobPart[];
 
-const rootFolder = process.env.CACHE_FOLDER || "./.cache";
-
-if (process.env.PRESERVE_CACHE != "true")
-  await rm(rootFolder, { force: true, recursive: true });
-
 export class FSCache {
-  dir: string;
-
   /**
    * @param dev If `true`, the cache will watch the source file for changes,
    * removing the corresponding cache file when any change occurs and allowing
    * any re-render logic that relies on `FSCache#file(...).exists()`
+   * @param root Default: `process.env.CACHE_FOLDER || "./.bunsai"`
+   * @param preserveCache Default: `process.env.PRESERVE_CACHE == "true"`
    */
   constructor(
-    public type: "loader" | "middleware",
-    public name: string,
-    public dev?: boolean
+    public events: EventEmitter,
+    public dev?: boolean,
+    public root = process.env.CACHE_FOLDER || "./.bunsai",
+    preserveCache = process.env.PRESERVE_CACHE == "true"
   ) {
-    this.dir = join(rootFolder, type, name);
+    if (!preserveCache) rmSync(root, { force: true, recursive: true });
   }
 
   private getCachePath(filename: string) {
-    return join(this.dir, basename(filename));
+    const { base, dir, root } = parse(filename);
+    return join(this.root, dir.replace(root, ""), base);
   }
 
   /**
    * Should be called before all other operations
    */
   async setup() {
-    await mkdir(this.dir, { recursive: true });
+    await this.events.emit("cache.user.setup", { cache: this, server: null });
+    await mkdir(this.root, { recursive: true });
   }
 
   /**
@@ -56,10 +55,23 @@ export class FSCache {
 
     await Bun.write(cachePath, input);
 
+    await this.events.emit("cache.user.write", {
+      cache: this,
+      server: null,
+      cachedFilePath: cachePath,
+      originalFilePath: filename,
+    });
+
     if (this.dev) {
-      watch(filename, { persistent: true }, () =>
-        rm(cachePath, { force: true })
-      );
+      watch(filename, { persistent: true }, async () => {
+        await rm(cachePath, { force: true });
+        await this.events.emit("cache.user.write", {
+          cache: this,
+          server: null,
+          cachedFilePath: cachePath,
+          originalFilePath: filename,
+        });
+      });
     }
   }
 

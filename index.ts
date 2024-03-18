@@ -1,125 +1,69 @@
 import type { Server } from "bun";
-import type {
-  Extname,
-  LoaderMap,
-  BunSaiOptions,
-  ResolvedBunSaiOptions,
-  BunSaiEventsRecord,
-} from "./types";
-import { extname } from "path";
+
 import * as Internals from "./internals";
 
 export default class BunSai {
+  private $ready = false;
+  private $loaderMap: Map<Extname, BunSaiLoader> = new Map();
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
-  readonly routeLoaders: LoaderMap = {};
   readonly options: ResolvedBunSaiOptions;
-  readonly middlewares =
-    Internals.MiddlewareChannel.createRecord<BunSaiEventsRecord>([
-      "notFound",
-      "request",
-      "response",
-      "error",
-    ]);
+  readonly events = new Internals.EventEmitter();
 
   constructor(options: BunSaiOptions) {
     this.options = Internals.resolveOptions(options);
 
     const fileExtensions = this.options.staticFiles.concat(
-      Object.keys(this.options.loaders) as Extname[]
+      this.options.loaders.flatMap((l) => l.extensions)
     );
 
     this.router = new Bun.FileSystemRouter({
-      ...this.options,
+      ...this.options.router,
+      dir: this.options.dir,
       style: "nextjs",
       fileExtensions,
     });
+  }
 
-    Internals.getStatic(this);
-    Internals.initLoaders(this);
-    Internals.initMiddlewares(this);
+  protected async $setup() {
+    for (const loader of this.options.loaders) {
+      await loader.setup(this);
+
+      for (const ext of loader.extensions) this.$loaderMap.set(ext, loader);
+    }
+
+    await this.events.emit("lifecycle.init", { bunsai: this, server: null });
+
+    this.$ready = true;
   }
 
   protected $reloadRouter() {
     this.router.reload();
   }
 
-  protected async $fetch(request: Request, server: Server) {
-    try {
-      const reqResult = await this.middlewares.request.call(
-        { request, server },
-        this.options.dev
-      );
+  protected async $fetch(request: Request, server: Server): Promise<Response> {
+    if (!this.$ready) throw new Error("run setup first");
 
-      if (reqResult) return reqResult;
+    let result = new Response();
+    let shouldReturnEarly = false;
 
-      const route = this.router.match(request);
-
-      if (!route) {
-        const nfMidResult = await this.middlewares.notFound.call(
-          {
-            request,
-            server,
-          },
-          this.options.dev
-        );
-
-        return nfMidResult || new Response(null, { status: 404 });
+    function response(over?: Response) {
+      if (over) {
+        result = over;
+        shouldReturnEarly = true;
       }
 
-      const loader =
-        this.routeLoaders[extname(route.filePath).toLowerCase() as Extname];
-
-      if (!loader) throw new Internals.LoaderNotFoundError(request);
-
-      const response = await (
-        await loader
-      )(route.filePath, { server, request, route });
-
-      const resResult = await this.middlewares.response.call(
-        {
-          route,
-          response,
-          request,
-          server,
-        },
-        this.options.dev
-      );
-
-      return resResult || response;
-    } catch (error) {
-      const errResult = await this.middlewares.error.call(
-        {
-          error,
-          request,
-          server,
-        },
-        this.options.dev
-      );
-
-      if (errResult) return errResult;
-
-      throw error;
+      return result;
     }
-  }
 
-  /**
-   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
-   * @deprecated
-   */
-  addMiddleware(): never {
-    throw new Error(
-      "This method was removed on v0.2.0. Please use `middlewares` instead."
-    );
-  }
+    await this.events.emit("request.init", {
+      request,
+      server,
+      response,
+    });
 
-  /**
-   * This method was removed on v0.2.0. Please use {@link middlewares} instead.
-   * @deprecated
-   */
-  removeMiddleware(): never {
-    throw new Error(
-      "This method was removed on v0.2.0. Please use `middlewares` instead."
-    );
+    if (shouldReturnEarly) return result;
+
+    // todo: finish implementation
   }
 
   get fetch() {
@@ -128,6 +72,10 @@ export default class BunSai {
     return function (this: Server, request: Request) {
       return that.$fetch(request, this);
     };
+  }
+
+  get setup() {
+    return this.$setup.bind(this);
   }
 
   get reloadRouter() {
