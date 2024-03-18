@@ -46,9 +46,9 @@ export default class BunSai {
     let result = new Response();
     let shouldReturnEarly = false;
 
-    function response(over?: Response) {
-      if (over) {
-        result = over;
+    function response(overrid?: Response) {
+      if (overrid) {
+        result = overrid;
         shouldReturnEarly = true;
       }
 
