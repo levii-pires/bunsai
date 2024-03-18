@@ -1,7 +1,7 @@
-type Listener = BunSaiTypes.Events.EventHandler<any>;
+type Listener = BunSaiTypes.EventHandler<any>;
 
-export class EventEmitter implements BunSaiTypes.Events.EventEmitter {
-  private $listeners: Record<keyof BunSaiTypes.Events.EventMap, Listener[]> = {
+export class EventEmitter {
+  private $listeners: Record<keyof BunSaiTypes.EventMap, Listener[]> = {
     "lifecycle.init": [],
     "lifecycle.reload": [],
     "lifecycle.shutdown": [],
@@ -12,10 +12,7 @@ export class EventEmitter implements BunSaiTypes.Events.EventEmitter {
     "request.response": [],
   };
 
-  private $onceListeners: Record<
-    keyof BunSaiTypes.Events.EventMap,
-    Listener[]
-  > = {
+  private $onceListeners: Record<keyof BunSaiTypes.EventMap, Listener[]> = {
     "lifecycle.init": [],
     "lifecycle.reload": [],
     "lifecycle.shutdown": [],
@@ -26,60 +23,58 @@ export class EventEmitter implements BunSaiTypes.Events.EventEmitter {
     "request.response": [],
   };
 
-  addListener<E extends keyof BunSaiTypes.Events.EventMap>(
+  addListener<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E]
+    listener: BunSaiTypes.EventMap[E]
   ): this {
     this.$listeners[event].push(listener);
 
     return this;
   }
 
-  on<E extends keyof BunSaiTypes.Events.EventMap>(
+  on<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E]
+    listener: BunSaiTypes.EventMap[E]
   ): this {
     return this.addListener(event, listener);
   }
 
-  once<E extends keyof BunSaiTypes.Events.EventMap>(
+  once<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E]
+    listener: BunSaiTypes.EventMap[E]
   ): this {
     this.$onceListeners[event].push(listener);
 
     return this;
   }
 
-  prependListener<E extends keyof BunSaiTypes.Events.EventMap>(
+  prependListener<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E]
+    listener: BunSaiTypes.EventMap[E]
   ): this {
     this.$listeners[event].unshift(listener);
 
     return this;
   }
 
-  prependOnceListener<E extends keyof BunSaiTypes.Events.EventMap>(
+  prependOnceListener<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E]
+    listener: BunSaiTypes.EventMap[E]
   ): this {
     this.$onceListeners[event].unshift(listener);
 
     return this;
   }
 
-  off<E extends keyof BunSaiTypes.Events.EventMap>(
+  off<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E],
+    listener: BunSaiTypes.EventMap[E],
     once?: boolean
   ): this {
     return this.removeListener(event, listener, once);
   }
 
-  removeAllListeners<E extends keyof BunSaiTypes.Events.EventMap>(
-    event?: E | undefined
-  ): this {
+  removeAllListeners<E extends keyof BunSaiTypes.EventMap>(event?: E): this {
     if (event) {
       this.$listeners[event] = [];
       this.$onceListeners[event] = [];
@@ -98,9 +93,9 @@ export class EventEmitter implements BunSaiTypes.Events.EventEmitter {
     return this;
   }
 
-  removeListener<E extends keyof BunSaiTypes.Events.EventMap>(
+  removeListener<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    listener: BunSaiTypes.Events.EventMap[E],
+    listener: BunSaiTypes.EventMap[E],
     once?: boolean
   ): this {
     if (!once)
@@ -115,59 +110,38 @@ export class EventEmitter implements BunSaiTypes.Events.EventEmitter {
     return this;
   }
 
-  // @ts-ignore
-  emit<E extends keyof BunSaiTypes.Events.EventMap>(
+  async emit<E extends keyof BunSaiTypes.EventMap>(
     event: E,
-    payload: Omit<Parameters<BunSaiTypes.Events.EventMap[E]>[0], "break">
-  ): boolean {
+    payload: Omit<Parameters<BunSaiTypes.EventMap[E]>[0], "break">
+  ) {
     let shouldBreak = false;
 
     function _break() {
       shouldBreak = true;
     }
 
-    const listeners = [
-      ...this.$onceListeners[event],
-      ...this.$listeners[event],
-    ];
-
-    for (const listener of listeners) {
+    for (const listener of this.$listeners[event]) {
       // @ts-ignore
-      listener({ ...payload, break: _break });
+      await listener({ ...payload, break: _break });
+
+      if (shouldBreak) break;
+    }
+
+    for (const listener of this.$onceListeners[event]) {
+      // @ts-ignore
+      await listener({ ...payload, break: _break });
 
       this.removeListener(event, listener, true);
 
       if (shouldBreak) break;
     }
-
-    return true;
   }
 
   eventNames(): (string | symbol)[] {
     return Object.keys(this.$listeners);
   }
 
-  rawListeners<E extends keyof BunSaiTypes.Events.EventMap>(
-    event: E
-  ): BunSaiTypes.Events.EventMap[E][] {
-    throw new Error("Method not implemented.");
-  }
-
-  listeners<E extends keyof BunSaiTypes.Events.EventMap>(
-    event: E
-  ): BunSaiTypes.Events.EventMap[E][] {
-    throw new Error("Method not implemented.");
-  }
-
-  listenerCount<E extends keyof BunSaiTypes.Events.EventMap>(event: E): number {
+  listenerCount<E extends keyof BunSaiTypes.EventMap>(event: E): number {
     return this.$listeners[event].length + this.$onceListeners[event].length;
-  }
-
-  getMaxListeners(): number {
-    throw new Error("Method not implemented.");
-  }
-
-  setMaxListeners(maxListeners: number): this {
-    throw new Error("Method not implemented.");
   }
 }

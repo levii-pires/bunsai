@@ -31,8 +31,5 @@
   ],
   "license": "MIT",
   "private": false,
-  "type": "module",
-  "dependencies": {
-    "typed-emitter": "^2.1.0"
-  }
+  "type": "module"
 }
