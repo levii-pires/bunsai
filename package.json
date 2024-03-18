@@ -19,7 +19,7 @@
   "files": [
     "loaders",
     "index.ts",
-    "types.ts",
+    "types.d.ts",
     "recommended.ts",
     "internals",
     "middlewares",
