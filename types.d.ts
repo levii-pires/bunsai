@@ -21,6 +21,9 @@ declare global {
 
     interface GenericPayload {
       server: Server;
+      /**
+       * Break event execution chain
+       */
       break(): void;
     }
 
