@@ -53,6 +53,10 @@ export default class BunSai {
     await this.events.emit("lifecycle.reload", { bunsai: this, server: null });
   }
 
+  protected $getLoaderByExt(ext: Extname) {
+    return this.$loaderMap.get(ext);
+  }
+
   protected async $fetch(request: Request, server: Server) {
     if (!this.$ready) throw new Error("run setup first");
 
@@ -101,7 +105,7 @@ export default class BunSai {
     const loader = this.$loaderMap.get(path.ext as Extname);
 
     if (loader) {
-      result = await loader.load({ path, request, route, server });
+      result = await loader.plugins({ path, request, route, server });
     } else {
       result = new Response(Bun.file(route.filePath));
     }
@@ -161,6 +165,10 @@ export default class BunSai {
 
   get reload() {
     return this.$reload.bind(this);
+  }
+
+  get getLoaderByExt() {
+    return this.$getLoaderByExt.bind(this);
   }
 }
 

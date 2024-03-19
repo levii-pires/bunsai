@@ -16,7 +16,7 @@ export default class ModuleLoader implements BunSaiLoader {
     this.isDev = bunsai.options.dev;
   }
 
-  load(payload: BunSaiLoaderPayload): Response | Promise<Response> {
+  plugins(payload: BunSaiLoaderPayload): Response | Promise<Response> {
     throw new Error("Method not implemented.");
   }
 }
