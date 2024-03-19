@@ -13,7 +13,7 @@ declare global {
 
     type GetterSetter<Type> = {
       /**
-       * Get or set current
+       * Get or set current value
        */
       (override?: Awaited<NonNullable<Type>>): Type;
     };
@@ -75,12 +75,13 @@ declare global {
     };
   }
 
+  interface BunSaiLoaderPayload
+    extends Omit<BunSaiEvents.RequestLoadPayload, "break" | "response"> {}
+
   interface BunSaiLoader {
     extensions: Extname[];
     setup(bunsai: BunSai): void | Promise<void>;
-    load(
-      payload: Omit<BunSaiEvents.RequestLoadPayload, "break" | "response">
-    ): Response | Promise<Response>;
+    load(payload: BunSaiLoaderPayload): Response | Promise<Response>;
   }
 
   interface BunSaiOptions {

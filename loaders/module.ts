@@ -1,5 +1,4 @@
-import { FSCache } from "../internals";
-import type { Module, LoaderInitiator } from "../types";
+import type BunSai from "..";
 
 function responseInit(
   headers: Record<string, string> | undefined
@@ -7,4 +6,17 @@ function responseInit(
   return {
     headers: { "Content-Type": "text/html; charset=utf-8", ...headers },
   };
+}
+
+export default class ModuleLoader implements BunSaiLoader {
+  isDev = false;
+  extensions: Extname[] = [".ts", ".tsx"];
+
+  setup(bunsai: BunSai) {
+    this.isDev = bunsai.options.dev;
+  }
+
+  load(payload: BunSaiLoaderPayload): Response | Promise<Response> {
+    throw new Error("Method not implemented.");
+  }
 }

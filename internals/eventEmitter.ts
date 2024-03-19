@@ -4,6 +4,11 @@ interface ListenerMetadata {
   once: boolean;
 }
 
+export type EventPayload<P extends BunSaiEvents.GenericPayload> = Omit<
+  P,
+  "break"
+>;
+
 export class EventEmitter {
   private $listeners: Record<
     keyof BunSaiEvents.EventMap,
@@ -81,7 +86,7 @@ export class EventEmitter {
 
   async emit<E extends keyof BunSaiEvents.EventMap>(
     event: E,
-    payload: Omit<Parameters<BunSaiEvents.EventMap[E]>[0], "break">
+    payload: EventPayload<Parameters<BunSaiEvents.EventMap[E]>[0]>
   ) {
     let shouldBreak = false;
 

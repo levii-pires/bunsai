@@ -1,3 +1,5 @@
+/// <reference path="./types.d.ts" />
+
 import type { Server } from "bun";
 import { EventEmitter, FSCache, resolveOptions } from "./internals";
 import { parse } from "path";
@@ -45,7 +47,7 @@ export default class BunSai {
     this.$ready = true;
   }
 
-  protected async $reloadRouter() {
+  protected async $reload() {
     this.router.reload();
 
     await this.events.emit("lifecycle.reload", { bunsai: this, server: null });
@@ -157,8 +159,8 @@ export default class BunSai {
     return this.$setup.bind(this);
   }
 
-  get reloadRouter() {
-    return this.$reloadRouter.bind(this);
+  get reload() {
+    return this.$reload.bind(this);
   }
 }
 
