@@ -81,7 +81,7 @@ declare global {
   interface BunSaiLoader {
     extensions: Extname[];
     setup(bunsai: BunSai): void | Promise<void>;
-    plugins(payload: BunSaiLoaderPayload): BunPlugin[] | Promise<BunPlugin[]>;
+    plugins(): BunPlugin[] | Promise<BunPlugin[]>;
   }
 
   interface BunSaiOptions {

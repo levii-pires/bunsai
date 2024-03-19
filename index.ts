@@ -1,12 +1,12 @@
 /// <reference path="./types.d.ts" />
 
-import type { Server } from "bun";
+import type { BunPlugin, Server } from "bun";
 import { EventEmitter, FSCache, resolveOptions } from "./internals";
 import { parse } from "path";
 
 export default class BunSai {
   private $ready = false;
-  private $loaderMap: Map<Extname, BunSaiLoader> = new Map();
+  private $plugins: BunPlugin[] = [];
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly options: ResolvedBunSaiOptions;
   readonly events = new EventEmitter();
@@ -37,7 +37,7 @@ export default class BunSai {
     for (const loader of this.options.loaders) {
       await loader.setup(this);
 
-      for (const ext of loader.extensions) this.$loaderMap.set(ext, loader);
+      this.$plugins.push(...(await loader.plugins()));
     }
 
     await this.cache.setup();
