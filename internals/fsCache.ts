@@ -51,7 +51,10 @@ export class FSCache {
       rmSync(this.root, { force: true, recursive: true });
   }
 
-  private getCachePath(filename: string) {
+  /**
+   * @param filename Absolute original file path
+   */
+  resolve(filename: string) {
     const { base, dir, root } = parse(filename);
     return join(this.root, dir.replace(root, ""), base);
   }
@@ -68,14 +71,14 @@ export class FSCache {
    * @param filename Absolute original file path
    */
   file(filename: string, options?: BlobPropertyBag) {
-    return Bun.file(this.getCachePath(filename), options);
+    return Bun.file(this.resolve(filename), options);
   }
 
   /**
    * @param filename Absolute original file path
    */
   async write(filename: string, input: WriteInput) {
-    const cachePath = this.getCachePath(filename);
+    const cachePath = this.resolve(filename);
 
     await Bun.write(cachePath, input);
 
@@ -103,7 +106,7 @@ export class FSCache {
    * @param filename Absolute original file path
    */
   async invalidate(filename: string, options?: Omit<RmOptions, "force">) {
-    const cachePath = this.getCachePath(filename);
+    const cachePath = this.resolve(filename);
 
     await rm(cachePath, { ...options, force: true });
 

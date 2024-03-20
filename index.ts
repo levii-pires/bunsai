@@ -6,7 +6,7 @@ import { parse } from "path";
 
 export default class BunSai {
   private $ready = false;
-  private $plugins: BunPlugin[] = [];
+  private $loaderMap: Map<Extname, BunSaiLoader> = new Map();
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly options: ResolvedBunSaiOptions;
   readonly events = new EventEmitter();
@@ -31,13 +31,15 @@ export default class BunSai {
       dev: this.options.dev,
       events: this.events,
     });
+
+    if (this.options.dev) {
+      this.events.on("request.error", ({ error }) => console.error(error));
+    }
   }
 
   protected async $setup() {
     for (const loader of this.options.loaders) {
       await loader.setup(this);
-
-      this.$plugins.push(...(await loader.plugins()));
     }
 
     await this.cache.setup();
@@ -102,10 +104,27 @@ export default class BunSai {
 
     if (shouldReturnEarly) return result;
 
+    const build = await Bun.build({
+      entrypoints: [route.filePath],
+    });
+
     const loader = this.$loaderMap.get(path.ext as Extname);
 
     if (loader) {
-      result = await loader.plugins({ path, request, route, server });
+      const { outputs, logs, success } = await Bun.build({
+        ...(await loader.generate({ path, request, route, server })),
+        entrypoints: [route.filePath],
+        outdir: this.cache.resolve("/@bunsai-build"),
+      });
+
+      if (!success) {
+        throw new AggregateError(
+          logs,
+          `Errors were found during the build of "${request.url}"`
+        );
+      }
+
+      result = new Response(outputs[0]);
     } else {
       result = new Response(Bun.file(route.filePath));
     }
