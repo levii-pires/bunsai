@@ -79,14 +79,28 @@ declare global {
     extends Omit<BunSaiEvents.RequestLoadPayload, "break" | "response"> {}
 
   interface BunSaiLoaderGenerate
-    extends Omit<BuildConfig, "entrypoints" | "outdir"> {}
+    extends Pick<
+      BuildConfig,
+      | "define"
+      | "external"
+      | "loader"
+      | "target"
+      | "sourcemap"
+      | "plugins"
+      | "publicPath"
+      | "naming"
+    > {
+    target: "bun" | "browser";
+  }
 
   interface BunSaiLoader {
-    extensions: Extname[];
+    readonly extensions: readonly Extname[];
     setup(bunsai: BunSai): void | Promise<void>;
-    generate(
+    generate(): BunSaiLoaderGenerate | Promise<BunSaiLoaderGenerate>;
+    load?(
+      filePath: string,
       payload: BunSaiLoaderPayload
-    ): BunSaiLoaderGenerate | Promise<BunSaiLoaderGenerate>;
+    ): Response | Promise<Response>;
   }
 
   interface BunSaiOptions {
@@ -114,6 +128,15 @@ declare global {
 
     loaders?: BunSaiLoader[];
   }
+
+  interface BunSaiModuleResponse {
+    result: Response;
+    invalidate?: Date;
+  }
+
+  export type BunSaiModuleHandler = (
+    payload: BunSaiLoaderPayload
+  ) => BunSaiModuleResponse | Promise<BunSaiModuleResponse>;
 
   type ResolvedBunSaiOptions = Required<BunSaiOptions>;
 }

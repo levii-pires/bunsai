@@ -6,7 +6,6 @@
   "module": "./index.ts",
   "devDependencies": {
     "@types/bun": "^1.0.6",
-    "@types/node": "^20.11.14",
     "typescript": "^5.3.3"
   },
   "bugs": {
@@ -31,5 +30,9 @@
   ],
   "license": "MIT",
   "private": false,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "sass": "^1.72.0",
+    "sass-embedded": "^1.72.0"
+  }
 }

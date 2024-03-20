@@ -1,18 +1,22 @@
 /// <reference path="./types.d.ts" />
 
-import type { BunPlugin, Server } from "bun";
+import type { Server } from "bun";
 import { EventEmitter, FSCache, resolveOptions } from "./internals";
-import { parse } from "path";
+import { parse, join, resolve } from "path";
 
 export default class BunSai {
   private $ready = false;
+  private $outdir: string;
+  private $root: string;
   private $loaderMap: Map<Extname, BunSaiLoader> = new Map();
+  private $loaderGenerateMap: Map<BunSaiLoader, BunSaiLoaderGenerate> =
+    new Map();
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly options: ResolvedBunSaiOptions;
   readonly events = new EventEmitter();
   readonly cache: FSCache;
 
-  constructor(options: BunSaiOptions) {
+  constructor(options: BunSaiOptions = {}) {
     this.options = resolveOptions(options);
 
     const fileExtensions = this.options.staticFiles.concat(
@@ -32,7 +36,12 @@ export default class BunSai {
       events: this.events,
     });
 
+    this.$outdir = this.cache.resolve("/@bunsai-build");
+    this.$root = resolve(this.options.dir);
+
     if (this.options.dev) {
+      console.log("loaders:", this.options.loaders);
+      console.log("routes:", this.router.routes);
       this.events.on("request.error", ({ error }) => console.error(error));
     }
   }
@@ -40,6 +49,12 @@ export default class BunSai {
   protected async $setup() {
     for (const loader of this.options.loaders) {
       await loader.setup(this);
+
+      for (const ext of loader.extensions) {
+        this.$loaderMap.set(ext, loader);
+      }
+
+      this.$loaderGenerateMap.set(loader, await loader.generate());
     }
 
     await this.cache.setup();
@@ -104,27 +119,35 @@ export default class BunSai {
 
     if (shouldReturnEarly) return result;
 
-    const build = await Bun.build({
-      entrypoints: [route.filePath],
-    });
-
     const loader = this.$loaderMap.get(path.ext as Extname);
 
     if (loader) {
+      const generate = this.$loaderGenerateMap.get(loader);
+
+      if (!generate) throw new Error("Unexpected error");
+
       const { outputs, logs, success } = await Bun.build({
-        ...(await loader.generate({ path, request, route, server })),
+        ...generate,
         entrypoints: [route.filePath],
-        outdir: this.cache.resolve("/@bunsai-build"),
+        root: this.$root,
+        outdir: this.$outdir,
       });
 
       if (!success) {
         throw new AggregateError(
           logs,
-          `Errors were found during the build of "${request.url}"`
+          `Errors were found during "${route.filePath}" build`
         );
       }
 
-      result = new Response(outputs[0]);
+      if (loader.load) {
+        result = await loader.load(outputs[0].path, {
+          path,
+          request,
+          route,
+          server,
+        });
+      } else result = new Response(outputs[0]);
     } else {
       result = new Response(Bun.file(route.filePath));
     }
@@ -143,7 +166,7 @@ export default class BunSai {
     const that = this;
 
     return async function (this: Server, request: Request) {
-      if (that.options.dev) console.time("BunSai fetch: " + request.url);
+      if (that.options.dev) console.time(`BunSai fetch: ${request.url}`);
 
       let result: Response;
 
@@ -172,7 +195,10 @@ export default class BunSai {
         server: this,
       });
 
-      if (that.options.dev) console.timeEnd("BunSai fetch: " + request.url);
+      if (that.options.dev) {
+        console.timeEnd(`BunSai fetch: ${request.url}`);
+        console.log(`Response status: ${result.status}\n`);
+      }
 
       return result;
     };
