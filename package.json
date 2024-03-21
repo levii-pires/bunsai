@@ -32,7 +32,6 @@
   "private": false,
   "type": "module",
   "dependencies": {
-    "sass": "^1.72.0",
     "sass-embedded": "^1.72.0"
   }
 }
