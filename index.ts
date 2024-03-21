@@ -1,6 +1,6 @@
 /// <reference path="./types.d.ts" />
 
-import type { Server } from "bun";
+import type { BunPlugin, Server } from "bun";
 import { EventEmitter, FSCache, resolveOptions } from "./internals";
 import { parse, join, resolve } from "path";
 
@@ -9,8 +9,9 @@ export default class BunSai {
   private $outdir: string;
   private $root: string;
   private $loaderMap: Map<Extname, BunSaiLoader> = new Map();
-  private $loaderGenerateMap: Map<BunSaiLoader, BunSaiLoaderGenerate> =
+  private $loaderBuildMap: Map<BunSaiLoader, BunSaiLoaderBuildConfig> =
     new Map();
+  private $sharedPlugins: BunPlugin[] = [];
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly options: ResolvedBunSaiOptions;
   readonly events = new EventEmitter();
@@ -48,13 +49,15 @@ export default class BunSai {
 
   protected async $setup() {
     for (const loader of this.options.loaders) {
-      await loader.setup(this);
+      const plugins = (await loader.setup(this)) || [];
+
+      this.$sharedPlugins.push(...plugins);
 
       for (const ext of loader.extensions) {
         this.$loaderMap.set(ext, loader);
       }
 
-      this.$loaderGenerateMap.set(loader, await loader.generate());
+      if (loader.build) this.$loaderBuildMap.set(loader, await loader.build());
     }
 
     await this.cache.setup();
@@ -122,32 +125,43 @@ export default class BunSai {
     const loader = this.$loaderMap.get(path.ext as Extname);
 
     if (loader) {
-      const generate = this.$loaderGenerateMap.get(loader);
+      const buildConfig = this.$loaderBuildMap.get(loader);
 
-      if (!generate) throw new Error("Unexpected error");
+      if (!buildConfig) {
+        if (!loader.load)
+          throw new Error("The loader must have 'build()', 'load()' or both.");
 
-      const { outputs, logs, success } = await Bun.build({
-        ...generate,
-        entrypoints: [route.filePath],
-        root: this.$root,
-        outdir: this.$outdir,
-      });
-
-      if (!success) {
-        throw new AggregateError(
-          logs,
-          `Errors were found during "${route.filePath}" build`
-        );
-      }
-
-      if (loader.load) {
-        result = await loader.load(outputs[0].path, {
+        result = await loader.load(route.filePath, {
           path,
           request,
           route,
           server,
         });
-      } else result = new Response(outputs[0]);
+      } else {
+        const { outputs, logs, success } = await Bun.build({
+          ...buildConfig,
+          entrypoints: [route.filePath],
+          plugins: this.$sharedPlugins.concat(buildConfig.plugins || []),
+          root: this.$root,
+          outdir: this.$outdir,
+        });
+
+        if (!success) {
+          throw new AggregateError(
+            logs,
+            `Errors were found during "${route.filePath}" build`
+          );
+        }
+
+        if (loader.load) {
+          result = await loader.load(outputs[0].path, {
+            path,
+            request,
+            route,
+            server,
+          });
+        } else result = new Response(outputs[0]);
+      }
     } else {
       result = new Response(Bun.file(route.filePath));
     }

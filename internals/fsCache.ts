@@ -76,6 +76,7 @@ export class FSCache {
 
   /**
    * @param filename Absolute original file path
+   * @returns Cached file path
    */
   async write(filename: string, input: WriteInput) {
     const cachePath = this.resolve(filename);
@@ -100,6 +101,8 @@ export class FSCache {
         });
       });
     }
+
+    return cachePath;
   }
 
   /**
@@ -116,5 +119,39 @@ export class FSCache {
       cachedFilePath: cachePath,
       originalFilePath: filename,
     });
+  }
+
+  /**
+   * @param filename Absolute original file path
+   */
+  async load(
+    filename: string,
+    options?: BlobPropertyBag
+  ): Promise<
+    | [{ contents: ArrayBuffer; type: string }, null]
+    | [null, null | ErrnoException]
+  > {
+    const file = this.file(filename, options);
+
+    try {
+      return [{ contents: await file.arrayBuffer(), type: file.type }, null];
+    } catch (error) {
+      if ((error as ErrnoException).code == "ENOENT") return [null, null];
+
+      return [null, error as ErrnoException];
+    }
+  }
+
+  async response(filename: string, options?: BlobPropertyBag) {
+    const [result, error] = await this.load(filename, options);
+
+    if (result)
+      return new Response(result.contents, {
+        headers: { "content-type": result.type },
+      });
+
+    if (error) throw error;
+
+    return null;
   }
 }

@@ -1,37 +1,73 @@
+import type { BunPlugin } from "bun";
+import type { FSCache } from "../internals";
 import BunSai from "..";
 import { AsyncCompiler, Options, initAsyncCompiler } from "sass-embedded";
 
 export default class SassLoader implements BunSaiLoader {
   compiler: AsyncCompiler | null = null;
+  cache: FSCache | null = null;
 
   extensions = [".scss"] as const;
 
   constructor(public options?: Options<"async">) {}
 
-  async setup(bunsai: BunSai) {
+  async setup(bunsai: BunSai): Promise<BunPlugin[]> {
     this.compiler = await initAsyncCompiler();
-  }
+    this.cache = bunsai.cache;
 
-  generate(): BunSaiLoaderGenerate {
-    return {
-      target: "browser",
-      plugins: [
-        {
-          name: "Sass BunSai Loader",
-          setup: (build) => {
-            build.onLoad({ filter: /\.scss$/ }, async (args) => {
-              if (!this.compiler) throw new Error("run setup first");
+    return [
+      {
+        name: "Sass BunSai Loader",
+        setup: (build) => {
+          build.onLoad({ filter: /\.scss$/ }, async (args) => {
+            const [inCache, error] = await this.cache!.load(args.path);
 
+            if (inCache)
               return {
-                contents: (
-                  await this.compiler.compileAsync(args.path, this.options)
-                ).css,
+                contents: inCache.contents,
                 loader: "file",
               };
-            });
-          },
+
+            if (error) throw error;
+
+            const { css } = await this.compiler!.compileAsync(
+              args.path,
+              this.options
+            );
+
+            await this.cache!.write(args.path, css);
+
+            return {
+              contents: css,
+              loader: "file",
+            };
+          });
         },
-      ],
-    };
+      },
+    ];
+  }
+
+  async load(
+    filePath: string,
+    payload: BunSaiLoaderPayload
+  ): Promise<Response> {
+    if (!this.compiler || !this.cache) throw new Error("run setup first");
+
+    const [inCache, error] = await this.cache.load(filePath);
+
+    if (inCache)
+      return new Response(inCache.contents, {
+        headers: { "content-type": "text/css; charset=utf-8" },
+      });
+
+    if (error) throw error;
+
+    const { css } = await this.compiler.compileAsync(filePath, this.options);
+
+    await this.cache.write(filePath, css);
+
+    return new Response(css, {
+      headers: { "content-type": "text/css; charset=utf-8" },
+    });
   }
 }

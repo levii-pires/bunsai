@@ -1,4 +1,4 @@
-import type { BuildConfig, MatchedRoute, Server } from "bun";
+import type { BuildConfig, BunPlugin, MatchedRoute, Server } from "bun";
 import type BunSai from ".";
 import type { FSCache, FSCacheOptions } from "./internals";
 import type { ParsedPath } from "path";
@@ -78,7 +78,7 @@ declare global {
   interface BunSaiLoaderPayload
     extends Omit<BunSaiEvents.RequestLoadPayload, "break" | "response"> {}
 
-  interface BunSaiLoaderGenerate
+  interface BunSaiLoaderBuildConfig
     extends Pick<
       BuildConfig,
       | "define"
@@ -95,8 +95,9 @@ declare global {
 
   interface BunSaiLoader {
     readonly extensions: readonly Extname[];
-    setup(bunsai: BunSai): void | Promise<void>;
-    generate(): BunSaiLoaderGenerate | Promise<BunSaiLoaderGenerate>;
+
+    setup(bunsai: BunSai): void | BunPlugin[] | Promise<void | BunPlugin[]>;
+    build?(): BunSaiLoaderBuildConfig | Promise<BunSaiLoaderBuildConfig>;
     load?(
       filePath: string,
       payload: BunSaiLoaderPayload

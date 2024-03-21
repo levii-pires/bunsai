@@ -8,7 +8,7 @@ export default class ModuleLoader implements BunSaiLoader {
     this.isDev = bunsai.options.dev;
   }
 
-  generate(): BunSaiLoaderGenerate {
+  build(): BunSaiLoaderBuildConfig {
     return {
       target: "bun",
     };
