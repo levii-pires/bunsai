@@ -31,7 +31,7 @@ declare global {
         /**
          * Break event execution chain
          */
-        break(): void;
+        breakChain(): void;
       }
 
       interface RequestPayload extends GenericPayload {
@@ -39,14 +39,14 @@ declare global {
         response: GetterSetter<Response>;
       }
 
-      interface RequestLoadPayload extends RequestPayload {
+      interface LoadInitPayload extends RequestPayload {
         route: MatchedRoute;
         path: string;
       }
 
       interface EndedPayload extends RequestPayload {}
 
-      interface LoadedPayload extends EndedPayload {
+      interface LoadEndPayload extends EndedPayload {
         route: MatchedRoute;
       }
 
@@ -60,15 +60,23 @@ declare global {
 
       interface CachePayload extends GenericPayload {
         cache: FSCache;
-        cachedFilePath?: string;
-        originalFilePath?: string;
+        /**
+         * On watch change, if `type == 'add'`, cachedFilePath will be an empty string
+         * because the file was recently added and thus not cached.
+         */
+        cachedFilePath: string;
+        originalFilePath: string;
+      }
+
+      interface CacheWatchChangePayload extends CachePayload {
+        type: "change" | "unlink" | "add";
       }
 
       type EventMap = {
         "request.init": EventHandler<RequestPayload>;
-        "request.loadInit": EventHandler<RequestLoadPayload>;
+        "request.loadInit": EventHandler<LoadInitPayload>;
         "request.notFound": EventHandler<RequestPayload>;
-        "request.loadEnd": EventHandler<LoadedPayload>;
+        "request.loadEnd": EventHandler<LoadEndPayload>;
         "request.end": EventHandler<EndedPayload>;
         "request.error": EventHandler<ErrorPayload>;
 
@@ -76,15 +84,17 @@ declare global {
         "lifecycle.reload": EventHandler<LifecyclePayload>;
         "lifecycle.shutdown": EventHandler<LifecyclePayload>;
 
-        "cache.watch.invalidate": EventHandler<Required<CachePayload>>;
-        "cache.user.write": EventHandler<Required<CachePayload>>;
-        "cache.user.setup": EventHandler<CachePayload>;
-        "cache.user.invalidate": EventHandler<Required<CachePayload>>;
+        "cache.watch.change": EventHandler<CacheWatchChangePayload>;
+        "cache.user.write": EventHandler<CachePayload>;
+        "cache.user.setup": EventHandler<
+          Omit<CachePayload, "cachedFilePath" | "originalFilePath">
+        >;
+        "cache.user.invalidate": EventHandler<CachePayload>;
       };
     }
 
     interface LoaderPayload
-      extends Omit<Events.RequestLoadPayload, "break" | "response"> {}
+      extends Omit<Events.LoadInitPayload, "breakChain" | "response"> {}
 
     interface LoaderBuildConfig
       extends Pick<
@@ -123,14 +133,19 @@ declare global {
 
     type OutputType = "module" | "file";
 
-    type Manifest = Record<
-      string,
-      {
+    interface Manifest {
+      [x: string]: {
         path: string;
         type: OutputType;
         responseInit: ResponseInit | null;
-      }
-    >;
+      };
+    }
+
+    interface BuildInput {
+      path: ParsedPath;
+      matcher: string;
+      filePath: string;
+    }
 
     interface Options {
       /**

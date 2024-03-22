@@ -1,6 +1,5 @@
 import type { MatchedRoute, Server } from "bun";
-import type { BunSai.EventsRecord, MiddlewareRunnerWithThis } from "../types";
-import { Middleware, MiddlewareRecord } from "../internals";
+import type { EventEmitter } from "../internals";
 
 export interface CORSOptions {
   /**
@@ -118,22 +117,32 @@ function resolveOrigin(
   }
 }
 
-export class CORSPreflight extends Middleware<"request"> {
-  name = "@builtin.cors.preflight";
-  runsOn = "request" as const;
+export class CORS {
+  unsubscribe: () => void;
 
-  constructor(public readonly options: CORSOptions = {}) {
-    super();
+  constructor(events: EventEmitter, public readonly options: CORSOptions = {}) {
+    const preflight = (payload: BunSai.Events.RequestPayload) =>
+      this.$preflight(payload);
+    const response = (payload: BunSai.Events.LoadEndPayload) =>
+      this.$response(payload);
+
+    events
+      .addListener("request.init", preflight)
+      .addListener("request.loadEnd", response);
+
+    this.unsubscribe = () => {
+      events
+        .removeListener("request.init", preflight)
+        .removeListener("request.loadEnd", response);
+    };
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
-    {
-      request: Request;
-      server: Server;
-    },
-    this
-  > = function ({ request }) {
-    const requestOrigin = request.headers.get("Origin");
+  protected $preflight({
+    request,
+    response,
+    breakChain,
+  }: BunSai.Events.RequestPayload) {
+    const requestOrigin = request.headers.get("origin");
 
     if (
       request.method != "OPTIONS" ||
@@ -144,70 +153,48 @@ export class CORSPreflight extends Middleware<"request"> {
 
     const allowOrigin = resolveOrigin(this.options, requestOrigin, request);
 
-    if (!allowOrigin)
-      return new Response(null, {
-        status: 403,
-        statusText: "Blocked by CORS policy",
-      });
+    if (!allowOrigin) {
+      response(
+        new Response(null, {
+          status: 403,
+          statusText: "Blocked by CORS policy",
+        })
+      );
+
+      return;
+    }
 
     if (this.options.preflightContinue) return;
 
-    const response = new Response(null, {
+    const res = new Response(null, {
       status: this.options.optionsSuccessStatus || 204,
     });
 
-    applyHeaders(this.options, allowOrigin, response, request);
+    applyHeaders(this.options, allowOrigin, res, request);
 
-    return response;
-  };
-}
-
-export class CORSResponse extends Middleware<"response"> {
-  name = "@builtin.cors.response";
-  runsOn = "response" as const;
-
-  constructor(public readonly options: CORSOptions = {}) {
-    super();
+    response(res);
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
-    {
-      response: Response;
-      request: Request;
-      server: Server;
-      route: MatchedRoute;
-    },
-    this
-  > = function ({ response, request }) {
+  protected $response({ response, request }: BunSai.Events.LoadEndPayload) {
+    const res = response();
+
     const requestOrigin = request.headers.get("Origin");
 
     if (!requestOrigin || this.options.origin === false) return;
 
     const allowOrigin = resolveOrigin(this.options, requestOrigin, request);
 
-    if (!allowOrigin)
-      return new Response(null, {
-        status: 403,
-        statusText: "Blocked by CORS policy",
-      });
+    if (!allowOrigin) {
+      response(
+        new Response(null, {
+          status: 403,
+          statusText: "Blocked by CORS policy",
+        })
+      );
 
-    applyHeaders(this.options, allowOrigin, response, request);
-  };
+      return;
+    }
+
+    applyHeaders(this.options, allowOrigin, res, request);
+  }
 }
-
-export default function CORS(options: CORSOptions = {}) {
-  return {
-    preflight: new CORSPreflight(options),
-    response: new CORSResponse(options),
-  };
-}
-
-CORS.inject = (
-  middlewares: MiddlewareRecord<BunSai.EventsRecord>,
-  options: CORSOptions = {}
-) => {
-  const preflight = CORSPreflight.inject(middlewares, options);
-  const response = CORSResponse.inject(middlewares, options);
-
-  return { response, preflight };
-};

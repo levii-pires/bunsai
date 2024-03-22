@@ -6,7 +6,7 @@ interface ListenerMetadata {
 
 export type EventPayload<P extends BunSai.Events.GenericPayload> = Omit<
   P,
-  "break"
+  "breakChain"
 >;
 
 export class EventEmitter {
@@ -21,7 +21,7 @@ export class EventEmitter {
     "lifecycle.init": new Map(),
     "lifecycle.reload": new Map(),
     "lifecycle.shutdown": new Map(),
-    "cache.watch.invalidate": new Map(),
+    "cache.watch.change": new Map(),
     "cache.user.write": new Map(),
     "cache.user.setup": new Map(),
     "cache.user.invalidate": new Map(),
@@ -90,12 +90,12 @@ export class EventEmitter {
   ) {
     let shouldBreak = false;
 
-    function _break() {
+    function breakChain() {
       shouldBreak = true;
     }
 
     for (const [listener, metadata] of this.$listeners[event]) {
-      await listener({ ...payload, break: _break });
+      await listener({ ...payload, breakChain });
 
       if (metadata.once) this.removeListener(event, listener);
 

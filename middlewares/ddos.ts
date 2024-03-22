@@ -1,6 +1,5 @@
 import { Server } from "bun";
-import { MiddlewareRunnerWithThis } from "../types";
-import { Middleware } from "../internals/middleware";
+import type { EventEmitter } from "../internals";
 
 export interface DDOSOptions {
   /**
@@ -22,20 +21,27 @@ export interface DDOSOptions {
   strategy?: "x-forwarded-for" | "x-real-ip" | "server.requestIP";
 }
 
-export default class DDOS extends Middleware<"request"> {
-  name = "@builtin.ddos";
-  runsOn = "request" as const;
+export default class DDOS {
+  unsubscribe: () => void;
 
   readonly requestCountTable: Record<string, number> = {};
 
-  constructor(public readonly options: DDOSOptions = {}) {
-    super();
+  constructor(events: EventEmitter, public readonly options: DDOSOptions = {}) {
+    const request = (payload: BunSai.Events.RequestPayload) =>
+      this.$runner(payload);
+
+    events.addListener("request.init", request);
+
+    this.unsubscribe = () => {
+      events.removeListener("request.init", request);
+    };
   }
 
-  protected $runner: MiddlewareRunnerWithThis<
-    { request: Request; server: Server },
-    DDOS
-  > = function ({ request, server }) {
+  protected $runner({
+    request,
+    server,
+    response,
+  }: BunSai.Events.RequestPayload) {
     let addr = "";
 
     switch (this.options.strategy) {
@@ -58,7 +64,7 @@ export default class DDOS extends Middleware<"request"> {
 
       case "server.requestIP":
       default: {
-        const { address } = server.requestIP(request) || {};
+        const { address } = server?.requestIP(request) || {};
 
         if (address) addr = address;
 
@@ -77,9 +83,11 @@ export default class DDOS extends Middleware<"request"> {
     }, this.options.cooldown || 1000);
 
     if (currentCount > (this.options.limit || 20))
-      return new Response(null, {
-        status: 429,
-        statusText: "429 Too Many Requests",
-      });
-  };
+      response(
+        new Response(null, {
+          status: 429,
+          statusText: "429 Too Many Requests",
+        })
+      );
+  }
 }

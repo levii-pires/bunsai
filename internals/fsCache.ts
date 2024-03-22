@@ -1,8 +1,9 @@
 import type { BuildArtifact } from "bun";
 import type { EventEmitter } from "./eventEmitter";
-import { RmOptions, watch, rmSync } from "fs";
+import { RmOptions, rmSync } from "fs";
 import { mkdir, rm } from "fs/promises";
 import { join, parse, resolve } from "path";
+import { watch as fsWatch, FSWatcher } from "chokidar";
 
 export interface CachedBuildArtifact {
   output: BuildArtifact;
@@ -10,6 +11,10 @@ export interface CachedBuildArtifact {
 }
 
 export interface FSCacheOptions {
+  /**
+   * Base directory where all files come from
+   */
+  base: string;
   events: EventEmitter;
   /**
    * If `true`, the cache will watch the source file for changes,
@@ -28,10 +33,15 @@ export interface FSCacheOptions {
 }
 
 export class FSCache {
+  protected $watcher = fsWatch([]);
+  protected $watchedFiles: string[] = [];
+
   events: EventEmitter;
   dev: boolean;
   root: string;
   preserveCache: boolean;
+  base: string;
+
   /**
    * @param options.dev If `true`, the cache will watch the source file for changes,
    * removing the corresponding cache file when any change occurs and allowing
@@ -45,9 +55,26 @@ export class FSCache {
     this.root = options.root || process.env.CACHE_FOLDER || "./.bunsai";
     this.preserveCache =
       options.preserveCache ?? process.env.PRESERVE_CACHE == "true";
+    this.base = options.base;
 
-    if (!this.preserveCache)
-      rmSync(this.root, { force: true, recursive: true });
+    if (!this.preserveCache) this.reset();
+
+    this.$watcher = fsWatch(this.base, {
+      persistent: true,
+      awaitWriteFinish: true,
+    }).on("add", (path) => {
+      return this.events.emit("cache.watch.change", {
+        cache: this,
+        cachedFilePath: "",
+        originalFilePath: path,
+        server: null,
+        type: "add",
+      });
+    });
+  }
+
+  reset() {
+    rmSync(this.root, { force: true, recursive: true });
   }
 
   /**
@@ -77,7 +104,7 @@ export class FSCache {
    * @param filename Absolute original file path
    * @returns Cached file path
    */
-  async write(filename: string, input: WriteInput, skipWatch?: boolean) {
+  async write(filename: string, input: WriteInput, watch?: string | false) {
     const cachePath = this.resolve(filename);
 
     await Bun.write(cachePath, input);
@@ -89,30 +116,61 @@ export class FSCache {
       originalFilePath: filename,
     });
 
-    if (this.dev && !skipWatch) {
-      watch(filename, { persistent: true }, async () => {
-        await rm(cachePath, { force: true });
-        await this.events.emit("cache.watch.invalidate", {
-          cache: this,
-          server: null,
-          cachedFilePath: cachePath,
-          originalFilePath: filename,
-        });
-      });
+    if (this.dev && watch !== false) {
+      this.watch(typeof watch == "string" ? watch : filename, cachePath);
     }
 
     return cachePath;
   }
 
-  async writeBuildOutputs(outputs: BuildArtifact[], basedir: string) {
+  /**
+   * @param filename Absolute original file path
+   * @param cachePath Cached file path
+   */
+  watch(filename: string, cachePath: string) {
+    if (this.$watchedFiles.includes(filename)) return;
+
+    this.$watchedFiles.push(filename);
+
+    this.$watcher.on("all", async (type, path) => {
+      switch (type) {
+        case "change":
+        case "unlink":
+          break;
+        default: {
+          return;
+        }
+      }
+
+      if (resolve(filename) != resolve(path)) return;
+
+      await rm(cachePath, { force: true });
+
+      await this.events.emit("cache.watch.change", {
+        cache: this,
+        cachedFilePath: cachePath,
+        originalFilePath: filename,
+        server: null,
+        type,
+      });
+    });
+  }
+
+  async writeBuildOutputs(
+    entrypoint: string,
+    outputs: BuildArtifact[],
+    basedir: string
+  ) {
     const paths: CachedBuildArtifact[] = [];
 
     for (const output of outputs) {
       paths.push({
         output,
-        cachedPath: await this.write(join(basedir, output.path), output, true),
+        cachedPath: await this.write(join(basedir, output.path), output, false),
       });
     }
+
+    this.watch(entrypoint, paths[0].cachedPath);
 
     return paths;
   }

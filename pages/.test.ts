@@ -4,8 +4,9 @@ import SassLoader from "../loaders/sass";
 
 const init = performance.now();
 
-const { build, setup, writeManifest } = new BunSai({
+const { build, setup, writeManifest, events } = new BunSai({
   loaders: [new ModuleLoader(), new SassLoader()],
+  staticFiles: [".txt"],
 });
 
 await setup();

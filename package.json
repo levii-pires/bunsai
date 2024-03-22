@@ -33,6 +33,7 @@
   "private": false,
   "type": "module",
   "dependencies": {
+    "chokidar": "^3.6.0",
     "sass-embedded": "^1.72.0"
   }
 }
