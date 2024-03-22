@@ -19,6 +19,7 @@
     "loaders",
     "index.ts",
     "types.d.ts",
+    "core.ts",
     "recommended.ts",
     "internals",
     "middlewares",

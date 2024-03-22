@@ -4,16 +4,17 @@ import SassLoader from "../loaders/sass";
 
 const init = performance.now();
 
-const { build, setup } = new BunSai({
+const { build, setup, writeManifest } = new BunSai({
   loaders: [new ModuleLoader(), new SassLoader()],
 });
 
 await setup();
 
+Bun.serve({ fetch: await build() });
+
 const end = performance.now();
 
 console.log("BunSai init took ", ((end - init) / 1000).toFixed(3), "seconds");
 
-Bun.serve({ fetch: await build() });
-
+await writeManifest("manifest.json");
 export {};

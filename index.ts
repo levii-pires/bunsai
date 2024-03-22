@@ -55,6 +55,8 @@ export default class BunSai extends BunSaiCore {
   protected async $reload() {
     this.router.reload();
 
+    await this.$build();
+
     await this.events.emit("lifecycle.reload", { bunsai: this, server: null });
   }
 
@@ -138,10 +140,6 @@ export default class BunSai extends BunSaiCore {
         };
       }
     }
-
-    console.log(this.$manifest);
-
-    return this.$wrapFetch();
   }
 
   protected async $writeManifest(path: string) {
@@ -149,23 +147,28 @@ export default class BunSai extends BunSaiCore {
   }
 
   get writeManifest() {
-    return this.$writeManifest.bind(this);
+    return (path: string) => {
+      return this.$writeManifest(path);
+    };
   }
 
   get build() {
-    return this.$build.bind(this);
+    return async () => {
+      await this.$build();
+      return this.$wrapFetch();
+    };
   }
 
   get setup() {
-    return this.$setup.bind(this);
+    return () => this.$setup();
   }
 
   get reload() {
-    return this.$reload.bind(this);
+    return () => this.$reload();
   }
 
   get getLoaderByExt() {
-    return this.$getLoaderByExt.bind(this);
+    return (ext: Extname) => this.$getLoaderByExt(ext);
   }
 }
 
