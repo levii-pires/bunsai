@@ -1,4 +1,6 @@
-export function resolveOptions(options: BunSaiOptions): ResolvedBunSaiOptions {
+export function resolveOptions(
+  options: BunSai.Options
+): BunSai.ResolvedOptions {
   return {
     dev: options.dev ?? process.env.NODE_ENV !== "production",
     dir: options.dir || "./pages",

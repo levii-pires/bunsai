@@ -3,7 +3,7 @@ import type { FSCache } from "../internals";
 import BunSai from "..";
 import { AsyncCompiler, Options, initAsyncCompiler } from "sass-embedded";
 
-export default class SassLoader implements BunSaiLoader {
+export default class SassLoader implements BunSai.Loader {
   compiler: AsyncCompiler | null = null;
   cache: FSCache | null = null;
 
@@ -47,18 +47,19 @@ export default class SassLoader implements BunSaiLoader {
     ];
   }
 
-  async load(
-    filePath: string,
-    payload: BunSaiLoaderPayload
-  ): Promise<Response> {
+  async load(filePath: string): Promise<BunSai.LoaderLoadResult> {
     if (!this.compiler || !this.cache) throw new Error("run setup first");
 
     const [inCache, error] = await this.cache.load(filePath);
 
     if (inCache)
-      return new Response(inCache.contents, {
-        headers: { "content-type": "text/css; charset=utf-8" },
-      });
+      return {
+        input: inCache.contents,
+        type: "file",
+        responseInit: {
+          headers: { "content-type": "text/css; charset=utf-8" },
+        },
+      };
 
     if (error) throw error;
 
@@ -66,8 +67,12 @@ export default class SassLoader implements BunSaiLoader {
 
     await this.cache.write(filePath, css);
 
-    return new Response(css, {
-      headers: { "content-type": "text/css; charset=utf-8" },
-    });
+    return {
+      input: css,
+      type: "file",
+      responseInit: {
+        headers: { "content-type": "text/css; charset=utf-8" },
+      },
+    };
   }
 }

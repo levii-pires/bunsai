@@ -4,7 +4,7 @@ import SassLoader from "../loaders/sass";
 
 const init = performance.now();
 
-const { fetch, setup } = new BunSai({
+const { build, setup } = new BunSai({
   loaders: [new ModuleLoader(), new SassLoader()],
 });
 
@@ -14,6 +14,6 @@ const end = performance.now();
 
 console.log("BunSai init took ", ((end - init) / 1000).toFixed(3), "seconds");
 
-Bun.serve({ fetch });
+Bun.serve({ fetch: await build() });
 
 export {};

@@ -9,6 +9,7 @@
     "isolatedModules": true,
     "sourceMap": true,
     "noEmit": true,
+    "noImplicitOverride": true,
     "types": ["@types/bun", "./types.d.ts"]
   }
 }

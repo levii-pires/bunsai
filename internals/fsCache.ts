@@ -1,14 +1,13 @@
+import type { BuildArtifact } from "bun";
 import type { EventEmitter } from "./eventEmitter";
 import { RmOptions, watch, rmSync } from "fs";
 import { mkdir, rm } from "fs/promises";
-import { join, parse } from "path";
+import { join, parse, resolve } from "path";
 
-type WriteInput =
-  | string
-  | Blob
-  | NodeJS.TypedArray
-  | ArrayBufferLike
-  | Bun.BlobPart[];
+export interface CachedBuildArtifact {
+  output: BuildArtifact;
+  cachedPath: string;
+}
 
 export interface FSCacheOptions {
   events: EventEmitter;
@@ -56,7 +55,7 @@ export class FSCache {
    */
   resolve(filename: string) {
     const { base, dir, root } = parse(filename);
-    return join(this.root, dir.replace(root, ""), base);
+    return resolve(this.root, dir.replace(root, ""), base);
   }
 
   /**
@@ -78,7 +77,7 @@ export class FSCache {
    * @param filename Absolute original file path
    * @returns Cached file path
    */
-  async write(filename: string, input: WriteInput) {
+  async write(filename: string, input: WriteInput, skipWatch?: boolean) {
     const cachePath = this.resolve(filename);
 
     await Bun.write(cachePath, input);
@@ -90,7 +89,7 @@ export class FSCache {
       originalFilePath: filename,
     });
 
-    if (this.dev) {
+    if (this.dev && !skipWatch) {
       watch(filename, { persistent: true }, async () => {
         await rm(cachePath, { force: true });
         await this.events.emit("cache.watch.invalidate", {
@@ -103,6 +102,19 @@ export class FSCache {
     }
 
     return cachePath;
+  }
+
+  async writeBuildOutputs(outputs: BuildArtifact[], basedir: string) {
+    const paths: CachedBuildArtifact[] = [];
+
+    for (const output of outputs) {
+      paths.push({
+        output,
+        cachedPath: await this.write(join(basedir, output.path), output, true),
+      });
+    }
+
+    return paths;
   }
 
   /**
