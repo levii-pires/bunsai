@@ -1,11 +1,13 @@
 /// <reference path="./types.d.ts" />
 
-import type { BunPlugin } from "bun";
+import type { BunPlugin, Server } from "bun";
 import { FSCache } from "./internals";
 import { parse, resolve } from "path";
 import BunSaiCore from "./core";
+import { readdir } from "fs/promises";
 
 export default class BunSai extends BunSaiCore {
+  private $shouldReload = false;
   private $ready = false;
   private $root: string;
   private $loaderMap: Map<Extname, BunSai.Loader> = new Map();
@@ -34,60 +36,41 @@ export default class BunSai extends BunSaiCore {
   protected async $setup() {
     await this.cache.setup();
 
-    this.events.on(
-      "cache.watch.change",
-      ({ originalFilePath, cachedFilePath, type }) => {
-        switch (type) {
-          case "change":
-            break;
+    this.events.on("cache.watch.change", async ({ originalFilePath, type }) => {
+      switch (type) {
+        case "change":
+          break;
 
-          case "add": {
-            this.$recreateRouter();
-            break;
-          }
-
-          case "unlink": {
-            const [matcher] =
-              Object.entries(this.$manifest).find(
-                ([, { path }]) => resolve(path) == resolve(cachedFilePath)
-              ) || [];
-
-            if (matcher) {
-              delete this.$manifest[matcher];
-              delete this.router.routes[matcher];
-            }
-
-            console.log(this.router.routes, "\n", this.$manifest);
-
-            return this.cache.invalidate(originalFilePath);
-          }
-
-          default: {
-            throw new Error(`Invalid type: "${type}"`);
-          }
+        case "unlink":
+        case "add": {
+          console.log(await readdir(this.options.dir));
+          this.$shouldReload = true;
+          return;
         }
 
-        const [matcher] =
-          Object.entries(this.router.routes).find(
-            ([, filePath]) => resolve(filePath) == resolve(originalFilePath)
-          ) || [];
-
-        if (!matcher)
-          throw new Error(
-            `BunSai bug: matcher not found for "${originalFilePath}"`
-          );
-
-        const input = {
-          filePath: originalFilePath,
-          path: parse(originalFilePath),
-          matcher,
-        };
-
-        console.log(input);
-
-        return this.$build([input]);
+        default: {
+          throw new Error(`Invalid type: "${type}"`);
+        }
       }
-    );
+
+      const [matcher] =
+        Object.entries(this.router.routes).find(
+          ([, filePath]) => resolve(filePath) == resolve(originalFilePath)
+        ) || [];
+
+      if (!matcher)
+        throw new Error(
+          `BunSai bug: matcher not found for "${originalFilePath}"`
+        );
+
+      const input = {
+        filePath: originalFilePath,
+        path: parse(originalFilePath),
+        matcher,
+      };
+
+      return this.$build([input]);
+    });
 
     for (const loader of this.options.loaders) {
       const plugins = (await loader.setup(this)) || [];
@@ -110,9 +93,9 @@ export default class BunSai extends BunSaiCore {
     console.log("Reloading BunSai...");
     console.time("BunSai Reload");
 
-    this.cache.reset();
+    // this.cache.reset();
 
-    this.router.reload();
+    this.$recreateRouter();
 
     this.$manifest = {};
 
@@ -162,13 +145,14 @@ export default class BunSai extends BunSaiCore {
             entrypoints: [filePath],
             plugins: this.$sharedPlugins.concat(buildConfig.plugins || []),
             root: this.$root,
+            outdir: undefined,
           });
 
           if (!success) {
-            throw new AggregateError(
-              logs,
-              `Errors were found during "${filePath}" build`
-            );
+            throw new AggregateError([
+              `Errors were found during "${filePath}" build:`,
+              ...logs,
+            ]);
           }
 
           const [{ cachedPath, output }] = await this.cache.writeBuildOutputs(
@@ -211,6 +195,18 @@ export default class BunSai extends BunSaiCore {
 
   protected async $writeManifest(path: string) {
     await Bun.write(path, JSON.stringify(this.$manifest));
+  }
+
+  protected override async $fetch(request: Request, server: Server) {
+    try {
+      if (this.$shouldReload) await this.$reload();
+
+      this.$shouldReload = false;
+    } catch (error) {
+      throw new AggregateError(["Reload failed:", error]);
+    }
+
+    return super.$fetch(request, server);
   }
 
   get writeManifest() {

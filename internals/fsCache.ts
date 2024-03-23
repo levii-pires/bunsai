@@ -33,7 +33,7 @@ export interface FSCacheOptions {
 }
 
 export class FSCache {
-  protected $watcher = fsWatch([]);
+  protected $watcher: FSWatcher;
   protected $watchedFiles: string[] = [];
 
   events: EventEmitter;
@@ -62,6 +62,7 @@ export class FSCache {
     this.$watcher = fsWatch(this.base, {
       persistent: true,
       awaitWriteFinish: true,
+      ignoreInitial: true,
     }).on("add", (path) => {
       return this.events.emit("cache.watch.change", {
         cache: this,
@@ -144,8 +145,6 @@ export class FSCache {
 
       if (resolve(filename) != resolve(path)) return;
 
-      await rm(cachePath, { force: true });
-
       await this.events.emit("cache.watch.change", {
         cache: this,
         cachedFilePath: cachePath,
@@ -153,6 +152,8 @@ export class FSCache {
         server: null,
         type,
       });
+
+      // await rm(cachePath, { force: true });
     });
   }
 

@@ -8,7 +8,7 @@ export default class BunSaiCore {
   readonly options: BunSai.ResolvedOptions;
   readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly events = new EventEmitter();
-  readonly fileExtensions: Extname[];
+  readonly fileExtensions: readonly Extname[];
 
   protected constructor(options: BunSai.Options = {}) {
     this.options = resolveOptions(options);
@@ -21,7 +21,7 @@ export default class BunSaiCore {
       ...this.options.router,
       dir: this.options.dir,
       style: "nextjs",
-      fileExtensions: this.fileExtensions,
+      fileExtensions: this.fileExtensions as string[],
     });
   }
 
@@ -31,7 +31,7 @@ export default class BunSaiCore {
       ...this.options.router,
       dir: this.options.dir,
       style: "nextjs",
-      fileExtensions: this.fileExtensions,
+      fileExtensions: this.fileExtensions as string[],
     });
   }
 
