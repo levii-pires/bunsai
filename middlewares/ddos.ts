@@ -1,4 +1,3 @@
-import { Server } from "bun";
 import type { EventEmitter } from "../internals";
 
 export interface DDOSOptions {
@@ -21,12 +20,14 @@ export interface DDOSOptions {
   strategy?: "x-forwarded-for" | "x-real-ip" | "server.requestIP";
 }
 
-export default class DDOS {
-  unsubscribe: () => void;
+export default class DDOS implements BunSai.Middleware {
+  unsubscribe = () => {};
 
   readonly requestCountTable: Record<string, number> = {};
 
-  constructor(events: EventEmitter, public readonly options: DDOSOptions = {}) {
+  constructor(public readonly options: DDOSOptions = {}) {}
+
+  subscribe(events: EventEmitter) {
     const request = (payload: BunSai.Events.RequestPayload) =>
       this.$runner(payload);
 

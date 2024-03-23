@@ -1,4 +1,3 @@
-import type { MatchedRoute, Server } from "bun";
 import type { EventEmitter } from "../internals";
 
 export interface CORSOptions {
@@ -117,25 +116,10 @@ function resolveOrigin(
   }
 }
 
-export class CORS {
-  unsubscribe: () => void;
+export class CORS implements BunSai.Middleware {
+  unsubscribe = () => {};
 
-  constructor(events: EventEmitter, public readonly options: CORSOptions = {}) {
-    const preflight = (payload: BunSai.Events.RequestPayload) =>
-      this.$preflight(payload);
-    const response = (payload: BunSai.Events.LoadEndPayload) =>
-      this.$response(payload);
-
-    events
-      .addListener("request.init", preflight)
-      .addListener("request.loadEnd", response);
-
-    this.unsubscribe = () => {
-      events
-        .removeListener("request.init", preflight)
-        .removeListener("request.loadEnd", response);
-    };
-  }
+  constructor(public readonly options: CORSOptions = {}) {}
 
   protected $preflight({
     request,
@@ -196,5 +180,22 @@ export class CORS {
     }
 
     applyHeaders(this.options, allowOrigin, res, request);
+  }
+
+  subscribe(events: EventEmitter) {
+    const preflight = (payload: BunSai.Events.RequestPayload) =>
+      this.$preflight(payload);
+    const response = (payload: BunSai.Events.LoadEndPayload) =>
+      this.$response(payload);
+
+    events
+      .addListener("request.init", preflight)
+      .addListener("request.loadEnd", response);
+
+    this.unsubscribe = () => {
+      events
+        .removeListener("request.init", preflight)
+        .removeListener("request.loadEnd", response);
+    };
   }
 }

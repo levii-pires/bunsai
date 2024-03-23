@@ -1,3 +1,7 @@
+import { watch } from "chokidar";
+
+watch;
+
 const handler: BunSai.ModuleHandler = (payload) => {
   //   throw new Error("oops");
   return {

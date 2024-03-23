@@ -1,6 +1,6 @@
 import type { BuildConfig, BunPlugin, MatchedRoute, Server } from "bun";
 import type BunSai from ".";
-import type { FSCache, FSCacheOptions } from "./internals";
+import type { EventEmitter, FSCache, FSCacheOptions } from "./internals";
 import type { ParsedPath } from "path";
 
 declare global {
@@ -23,7 +23,7 @@ declare global {
         /**
          * Get or set current value
          */
-        (override?: Awaited<NonNullable<Type>>): Type;
+        (newValue?: Awaited<NonNullable<Type>>): Type;
       };
 
       interface GenericPayload {
@@ -68,7 +68,7 @@ declare global {
         originalFilePath: string;
       }
 
-      interface CacheWatchChangePayload extends CachePayload {
+      interface WatchChangePayload extends CachePayload {
         type: "change" | "unlink" | "add";
       }
 
@@ -84,32 +84,30 @@ declare global {
         "lifecycle.reload": EventHandler<LifecyclePayload>;
         "lifecycle.shutdown": EventHandler<LifecyclePayload>;
 
-        "cache.watch.change": EventHandler<CacheWatchChangePayload>;
-        "cache.user.write": EventHandler<CachePayload>;
-        "cache.user.setup": EventHandler<
+        "watch.change": EventHandler<WatchChangePayload>;
+
+        "cache.write": EventHandler<CachePayload>;
+        "cache.setup": EventHandler<
           Omit<CachePayload, "cachedFilePath" | "originalFilePath">
         >;
-        "cache.user.invalidate": EventHandler<CachePayload>;
+        "cache.invalidate": EventHandler<CachePayload>;
       };
+    }
+
+    interface Middleware {
+      subscribe(events: EventEmitter): void;
+      unsubscribe(): void;
     }
 
     interface LoaderPayload
       extends Omit<Events.LoadInitPayload, "breakChain" | "response"> {}
 
     interface LoaderBuildConfig
-      extends Pick<
-        BuildConfig,
-        | "define"
-        | "external"
-        | "loader"
-        | "target"
-        | "sourcemap"
-        | "plugins"
-        | "publicPath"
-        | "naming"
-      > {
+      extends Pick<BuildConfig, "define" | "external" | "loader" | "plugins"> {
       target: "bun" | "browser";
     }
+
+    type BuildTarget = Required<LoaderBuildConfig> & { entries: string[] };
 
     interface Loader {
       readonly extensions: readonly Extname[];
@@ -149,7 +147,7 @@ declare global {
 
     interface Options {
       /**
-       * @default "./pages"
+       * @default "./app"
        */
       dir?: string;
 
@@ -171,6 +169,8 @@ declare global {
       staticFiles?: Extname[];
 
       loaders?: Loader[];
+
+      middlewares?: Middleware[];
     }
 
     interface ModuleResponse {

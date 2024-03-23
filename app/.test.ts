@@ -1,17 +1,17 @@
 import BunSai from "../";
 import ModuleLoader from "../loaders/module";
 import SassLoader from "../loaders/sass";
+import Watch from "../middlewares/watch";
 
 const init = performance.now();
 
-const { build, setup, writeManifest, events } = new BunSai({
+const { start, writeManifest, events } = new BunSai({
   loaders: [new ModuleLoader(), new SassLoader()],
   staticFiles: [".txt"],
+  middlewares: [new Watch()],
 });
 
-await setup();
-
-Bun.serve({ fetch: await build() });
+Bun.serve({ fetch: await start() });
 
 const end = performance.now();
 

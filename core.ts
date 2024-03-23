@@ -13,6 +13,10 @@ export default class BunSaiCore {
   protected constructor(options: BunSai.Options = {}) {
     this.options = resolveOptions(options);
 
+    for (const middleware of this.options.middlewares) {
+      middleware.subscribe(this.events);
+    }
+
     this.fileExtensions = this.options.staticFiles.concat(
       this.options.loaders.flatMap((l) => l.extensions)
     );
@@ -25,23 +29,13 @@ export default class BunSaiCore {
     });
   }
 
-  protected $recreateRouter() {
-    // @ts-ignore
-    this.router = new Bun.FileSystemRouter({
-      ...this.options.router,
-      dir: this.options.dir,
-      style: "nextjs",
-      fileExtensions: this.fileExtensions as string[],
-    });
-  }
-
   protected async $fetch(request: Request, server: Server) {
     let result = new Response();
     let shouldReturnEarly = false;
 
-    function response(overrid?: Response) {
-      if (overrid) {
-        result = overrid;
+    function response(newValue?: Response) {
+      if (newValue) {
+        result = newValue;
         shouldReturnEarly = true;
       }
 
@@ -135,8 +129,8 @@ export default class BunSaiCore {
 
       let result: Response;
 
-      function response(overrid?: Response) {
-        if (overrid) result = overrid;
+      function response(newValue?: Response) {
+        if (newValue) result = newValue;
 
         return result;
       }

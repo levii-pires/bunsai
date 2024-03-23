@@ -11,17 +11,7 @@ export interface CachedBuildArtifact {
 }
 
 export interface FSCacheOptions {
-  /**
-   * Base directory where all files come from
-   */
-  base: string;
   events: EventEmitter;
-  /**
-   * If `true`, the cache will watch the source file for changes,
-   * removing the corresponding cache file when any change occurs and allowing
-   * any re-render logic that relies on `FSCache#file(...).exists()`
-   */
-  dev: boolean;
   /**
    * @default process.env.CACHE_FOLDER || "./.bunsai"
    */
@@ -33,14 +23,9 @@ export interface FSCacheOptions {
 }
 
 export class FSCache {
-  protected $watcher: FSWatcher;
-  protected $watchedFiles: string[] = [];
-
   events: EventEmitter;
-  dev: boolean;
   root: string;
   preserveCache: boolean;
-  base: string;
 
   /**
    * @param options.dev If `true`, the cache will watch the source file for changes,
@@ -51,27 +36,11 @@ export class FSCache {
    */
   constructor(options: FSCacheOptions) {
     this.events = options.events;
-    this.dev = options.dev;
     this.root = options.root || process.env.CACHE_FOLDER || "./.bunsai";
     this.preserveCache =
       options.preserveCache ?? process.env.PRESERVE_CACHE == "true";
-    this.base = options.base;
 
     if (!this.preserveCache) this.reset();
-
-    this.$watcher = fsWatch(join(this.base, "./**/*"), {
-      persistent: true,
-      awaitWriteFinish: true,
-      ignoreInitial: true,
-    }).on("add", (path) => {
-      return this.events.emit("cache.watch.change", {
-        cache: this,
-        cachedFilePath: "",
-        originalFilePath: path,
-        server: null,
-        type: "add",
-      });
-    });
   }
 
   reset() {
@@ -91,7 +60,7 @@ export class FSCache {
    */
   async setup() {
     await mkdir(this.root, { recursive: true });
-    await this.events.emit("cache.user.setup", { cache: this, server: null });
+    await this.events.emit("cache.setup", { cache: this, server: null });
   }
 
   /**
@@ -110,68 +79,32 @@ export class FSCache {
 
     await Bun.write(cachePath, input);
 
-    await this.events.emit("cache.user.write", {
+    await this.events.emit("cache.write", {
       cache: this,
       server: null,
       cachedFilePath: cachePath,
       originalFilePath: filename,
     });
 
-    if (this.dev && watch !== false) {
-      this.watch(typeof watch == "string" ? watch : filename, cachePath);
-    }
-
     return cachePath;
   }
 
-  /**
-   * @param filename Absolute original file path
-   * @param cachePath Cached file path
-   */
-  watch(filename: string, cachePath: string) {
-    if (this.$watchedFiles.includes(filename)) return;
-
-    this.$watchedFiles.push(filename);
-
-    this.$watcher.on("all", async (type, path) => {
-      switch (type) {
-        case "change":
-        case "unlink":
-          break;
-        default: {
-          return;
-        }
-      }
-
-      if (resolve(filename) != resolve(path)) return;
-
-      await this.events.emit("cache.watch.change", {
-        cache: this,
-        cachedFilePath: cachePath,
-        originalFilePath: filename,
-        server: null,
-        type,
-      });
-
-      // await rm(cachePath, { force: true });
-    });
-  }
-
-  async writeBuildOutputs(
-    entrypoint: string,
-    outputs: BuildArtifact[],
-    basedir: string
-  ) {
+  async writeBuildOutputs(outputs: BuildArtifact[], basedir: string) {
     const paths: CachedBuildArtifact[] = [];
 
     for (const output of outputs) {
-      paths.push({
+      const cachedPath = await this.write(
+        join(basedir, output.path),
         output,
-        cachedPath: await this.write(join(basedir, output.path), output, false),
-      });
-    }
+        false
+      );
 
-    if (this.dev) this.watch(entrypoint, paths[0].cachedPath);
+      if (output.kind == "entry-point")
+        paths.push({
+          output,
+          cachedPath,
+        });
+    }
 
     return paths;
   }
@@ -184,7 +117,7 @@ export class FSCache {
 
     await rm(cachePath, { ...options, force: true });
 
-    await this.events.emit("cache.user.invalidate", {
+    await this.events.emit("cache.invalidate", {
       cache: this,
       server: null,
       cachedFilePath: cachePath,
