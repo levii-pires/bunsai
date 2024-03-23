@@ -3,3 +3,4 @@ bun.lockb
 test.ts
 .cache
 .bunsai
+manifest.json

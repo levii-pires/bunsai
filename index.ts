@@ -174,13 +174,13 @@ export default class BunSai extends BunSaiCore {
 
     if (!success)
       throw new AggregateError([
-        "Found errors while building Bun target:",
+        `Found errors while building "${build.target}" target:`,
         ...logs,
       ]);
 
     const result = await this.cache.writeBuildOutputs(outputs, this.$root);
 
-    console.log(result);
+    console.log(build.entries, result);
   }
 
   protected async $writeManifest(path: string) {
