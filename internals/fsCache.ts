@@ -59,7 +59,7 @@ export class FSCache {
 
     if (!this.preserveCache) this.reset();
 
-    this.$watcher = fsWatch(this.base, {
+    this.$watcher = fsWatch(join(this.base, "./**/*"), {
       persistent: true,
       awaitWriteFinish: true,
       ignoreInitial: true,
@@ -171,7 +171,7 @@ export class FSCache {
       });
     }
 
-    this.watch(entrypoint, paths[0].cachedPath);
+    if (this.dev) this.watch(entrypoint, paths[0].cachedPath);
 
     return paths;
   }

@@ -36,41 +36,44 @@ export default class BunSai extends BunSaiCore {
   protected async $setup() {
     await this.cache.setup();
 
-    this.events.on("cache.watch.change", async ({ originalFilePath, type }) => {
-      switch (type) {
-        case "change":
-          break;
+    if (this.options.dev)
+      this.events.on(
+        "cache.watch.change",
+        async ({ originalFilePath, type }) => {
+          switch (type) {
+            case "change":
+              break;
 
-        case "unlink":
-        case "add": {
-          console.log(await readdir(this.options.dir));
-          this.$shouldReload = true;
-          return;
+            case "unlink":
+            case "add": {
+              this.$shouldReload = true;
+              return;
+            }
+
+            default: {
+              throw new Error(`Invalid type: "${type}"`);
+            }
+          }
+
+          const [matcher] =
+            Object.entries(this.router.routes).find(
+              ([, filePath]) => resolve(filePath) == resolve(originalFilePath)
+            ) || [];
+
+          if (!matcher)
+            throw new Error(
+              `BunSai bug: matcher not found for "${originalFilePath}"`
+            );
+
+          const input = {
+            filePath: originalFilePath,
+            path: parse(originalFilePath),
+            matcher,
+          };
+
+          return this.$build([input]);
         }
-
-        default: {
-          throw new Error(`Invalid type: "${type}"`);
-        }
-      }
-
-      const [matcher] =
-        Object.entries(this.router.routes).find(
-          ([, filePath]) => resolve(filePath) == resolve(originalFilePath)
-        ) || [];
-
-      if (!matcher)
-        throw new Error(
-          `BunSai bug: matcher not found for "${originalFilePath}"`
-        );
-
-      const input = {
-        filePath: originalFilePath,
-        path: parse(originalFilePath),
-        matcher,
-      };
-
-      return this.$build([input]);
-    });
+      );
 
     for (const loader of this.options.loaders) {
       const plugins = (await loader.setup(this)) || [];
@@ -93,7 +96,7 @@ export default class BunSai extends BunSaiCore {
     console.log("Reloading BunSai...");
     console.time("BunSai Reload");
 
-    // this.cache.reset();
+    this.cache.reset();
 
     this.$recreateRouter();
 
@@ -119,6 +122,12 @@ export default class BunSai extends BunSaiCore {
         matcher,
         filePath,
       }));
+
+    console.log(
+      `\nBuilding: \n\t=> ${input
+        .map(({ filePath }) => filePath)
+        .join("\n\t=> ")}`
+    );
 
     for (const { path, matcher, filePath } of input) {
       const loader = this.$loaderMap.get(path.ext as Extname);
