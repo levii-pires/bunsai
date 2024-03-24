@@ -1,5 +1,9 @@
 import { watch } from "chokidar";
 
+import x from "./sass.scss";
+
+console.log(x);
+
 watch;
 
 const handler: BunSai.ModuleHandler = (payload) => {

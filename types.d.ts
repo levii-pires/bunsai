@@ -102,25 +102,10 @@ declare global {
     interface LoaderPayload
       extends Omit<Events.LoadInitPayload, "breakChain" | "response"> {}
 
-    interface LoaderBuildConfig
-      extends Pick<BuildConfig, "define" | "external" | "loader" | "plugins"> {
-      target: "bun" | "browser";
-    }
-
-    type BuildTarget = Required<LoaderBuildConfig> & { entries: string[] };
-
     interface Loader {
       readonly extensions: readonly Extname[];
 
-      setup(bunsai: BunSai): void | BunPlugin[] | Promise<void | BunPlugin[]>;
-      build?(): LoaderBuildConfig | Promise<LoaderBuildConfig>;
-      load?(filePath: string): LoaderLoadResult | Promise<LoaderLoadResult>;
-    }
-
-    interface LoaderLoadResult {
-      input: WriteInput;
-      type: OutputType;
-      responseInit?: ResponseInit;
+      setup(bunsai: BunSai): BunPlugin[] | Promise<BunPlugin[]>;
     }
 
     interface ResponseInit {
@@ -129,27 +114,16 @@ declare global {
       statusText?: string;
     }
 
-    type OutputType = "module" | "file";
-
-    interface Manifest {
-      [x: string]: {
-        path: string;
-        type: OutputType;
-        responseInit: ResponseInit | null;
-      };
-    }
-
-    interface BuildInput {
-      path: ParsedPath;
-      matcher: string;
-      filePath: string;
-    }
-
     interface Options {
       /**
        * @default "./app"
        */
-      dir?: string;
+      root?: string;
+
+      /**
+       * @default "./dist"
+       */
+      outdir?: string;
 
       /**
        * @default process.env.NODE_ENV !== "production"
@@ -171,6 +145,11 @@ declare global {
       loaders?: Loader[];
 
       middlewares?: Middleware[];
+
+      build?: Pick<
+        Parameters<typeof Bun.build>[0],
+        "define" | "external" | "loader"
+      >;
     }
 
     interface ModuleResponse {
@@ -184,10 +163,17 @@ declare global {
 
     type ResolvedOptions = Required<Options>;
 
-    interface BuildRoute {
-      path: ParsedPath;
-      matcher: string;
-      filePath: string;
+    type EntryType = "static" | "module";
+
+    interface ManifestEntry {
+      origin: string;
+      path: string;
+      type: EntryType;
+      responseInit: ResponseInit | null;
+    }
+
+    interface Manifest {
+      [matcher: string]: ManifestEntry;
     }
   }
 }

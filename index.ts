@@ -1,55 +1,43 @@
 /// <reference path="./types.d.ts" />
 
-import type { BunPlugin } from "bun";
-import { FSCache } from "./internals";
-import { parse, resolve } from "path";
+import type { BunPlugin, FileSystemRouter } from "bun";
+import { resolve } from "path";
 import BunSaiCore from "./core";
+import { mkdirSync, existsSync, rmSync } from "fs";
 
 export default class BunSai extends BunSaiCore {
+  override readonly router: FileSystemRouter;
   private $ready = false;
   private $root: string;
-  private $loaderMap: Map<Extname, BunSai.Loader> = new Map();
-  private $loaderBuildMap: Map<BunSai.Loader, BunSai.LoaderBuildConfig> =
-    new Map();
-  private $sharedPlugins: BunPlugin[] = [];
-  readonly cache: FSCache;
+  private $plugins: BunPlugin[] = [];
 
   constructor(options?: BunSai.Options) {
     super(options);
 
-    this.cache = new FSCache({
-      ...this.options.cache,
-      events: this.events,
+    this.$root = resolve(this.options.root);
+
+    if (existsSync(this.options.outdir))
+      rmSync(this.options.outdir, { force: true, recursive: true });
+
+    mkdirSync(this.options.outdir);
+
+    this.router = new Bun.FileSystemRouter({
+      ...this.options.router,
+      dir: this.options.outdir,
+      style: "nextjs",
+      fileExtensions: this.fileExtensions as string[],
     });
 
-    this.$root = resolve(this.options.dir);
-
     if (this.options.dev) {
-      this.events.on("request.error", ({ error }) => console.error(error));
+      this.events.on("request.error", ({ error }) =>
+        console.error(error, "\n")
+      );
     }
   }
 
-  protected $getBuildInput() {
-    return Object.entries(this.router.routes).map(([matcher, filePath]) => ({
-      path: parse(filePath),
-      matcher,
-      filePath,
-    })) as BunSai.BuildInput[];
-  }
-
   protected async $setup() {
-    await this.cache.setup();
-
     for (const loader of this.options.loaders) {
-      const plugins = (await loader.setup(this)) || [];
-
-      this.$sharedPlugins.push(...plugins);
-
-      for (const ext of loader.extensions) {
-        this.$loaderMap.set(ext, loader);
-      }
-
-      if (loader.build) this.$loaderBuildMap.set(loader, await loader.build());
+      this.$plugins.push(...(await loader.setup(this)));
     }
 
     await this.events.emit("lifecycle.init", { bunsai: this, server: null });
@@ -62,125 +50,42 @@ export default class BunSai extends BunSaiCore {
     console.time("BunSai Reload");
 
     this.$manifest = {};
-    this.cache.reset();
     this.router.reload();
-
-    await this.$build(this.$getBuildInput());
-
+    await this.$build();
     await this.events.emit("lifecycle.reload", { bunsai: this, server: null });
 
     console.timeEnd("BunSai Reload");
   }
 
-  protected $getLoaderByExt(ext: Extname) {
-    return this.$loaderMap.get(ext);
-  }
-
-  protected async $build(input: BunSai.BuildInput[]) {
+  protected async $build() {
     if (!this.$ready) throw new Error("run setup first");
 
-    console.log(
-      `\nBuilding: \n\t=> ${input
-        .map(({ filePath }) => filePath)
-        .join("\n\t=> ")}`
+    const entrypointsGlob = new Bun.Glob(
+      `./**/*{${this.fileExtensions.join()}}`
     );
 
-    const buildConfigByTarget: Record<
-      BunSai.LoaderBuildConfig["target"],
-      BunSai.BuildTarget
-    > = {
-      bun: {
-        target: "bun",
-        define: {},
-        external: [],
-        loader: {},
-        entries: [],
-        plugins: [],
-      },
+    const entrypoints = await Array.fromAsync(
+      entrypointsGlob.scan({ cwd: this.$root, absolute: true })
+    );
 
-      browser: {
-        target: "browser",
-        define: {},
-        external: [],
-        loader: {},
-        entries: [],
-        plugins: [],
-      },
-    };
-
-    for (const { path, matcher, filePath } of input) {
-      const loader = this.$loaderMap.get(path.ext as Extname);
-
-      if (loader) {
-        const buildConfig = this.$loaderBuildMap.get(loader);
-
-        if (!buildConfig) {
-          if (!loader.load)
-            throw new Error("The loader must have 'build()' or 'load()'");
-
-          const { input, type, responseInit } = await loader.load(filePath);
-
-          const cachedPath = await this.cache.write(filePath, input);
-
-          this.$manifest[matcher] = {
-            path: cachedPath,
-            type,
-            responseInit: responseInit || null,
-          };
-        } else {
-          const config = buildConfigByTarget[buildConfig.target];
-
-          if (!config)
-            throw new Error(`invalid build target: "${buildConfig.target}"`);
-
-          config.entries.push(filePath);
-          config.external.push(...(buildConfig.external || []));
-          config.plugins.push(...(buildConfig.plugins || []));
-          Object.assign(config.define, buildConfig.define || {});
-          Object.assign(config.loader, buildConfig.loader || {});
-        }
-      } else {
-        const cachedPath = await this.cache.write(filePath, Bun.file(filePath));
-
-        this.$manifest[matcher] = {
-          path: cachedPath,
-          type: "file",
-          responseInit: null,
-        };
-      }
-    }
-
-    const { browser, bun } = buildConfigByTarget;
-
-    if (bun.entries.length > 0) await this.$bunBuild(bun);
-    if (browser.entries.length > 0) await this.$bunBuild(browser);
-  }
-
-  protected async $bunBuild(build: BunSai.BuildTarget) {
     const { logs, outputs, success } = await Bun.build({
-      entrypoints: build.entries,
-      define: build.define,
-      external: Array.from(new Set(build.external)),
-      loader: build.loader,
-      minify: true,
+      ...this.options.build,
+      entrypoints,
       naming: {
-        chunk: `.${build.target}-[name]-[hash].[ext]`,
+        chunk: ".[name]-[hash].[ext]",
+        asset: "[name].[ext]",
       },
-      plugins: this.$sharedPlugins.concat(Array.from(new Set(build.plugins))),
+      minify: true,
+      outdir: this.options.outdir,
+      plugins: this.$plugins,
       root: this.$root,
       splitting: true,
-      target: build.target,
+      target: "bun",
     });
 
-    if (!success)
-      throw new AggregateError([
-        `Found errors while building "${build.target}" target:`,
-        ...logs,
-      ]);
+    if (!success) throw new AggregateError(logs);
 
-    const result = await this.cache.writeBuildOutputs(outputs, this.$root);
-
-    console.log(build.entries, result);
+    console.log("entrypoints:", entrypoints, "\n\n", "outputs:", outputs);
   }
 
   protected async $writeManifest(path: string) {
@@ -196,21 +101,21 @@ export default class BunSai extends BunSaiCore {
   get start() {
     return async () => {
       await this.$setup();
-      await this.$build(this.$getBuildInput());
+      await this.$build();
       return this.$wrapFetch();
     };
   }
 
+  get setup() {
+    return () => this.$setup();
+  }
+
   get build() {
-    return (input: BunSai.BuildInput[]) => this.$build(input);
+    return () => this.$build();
   }
 
   get reload() {
     return () => this.$reload();
-  }
-
-  get getLoaderByExt() {
-    return (ext: Extname) => this.$getLoaderByExt(ext);
   }
 }
 

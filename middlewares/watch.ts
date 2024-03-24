@@ -17,7 +17,7 @@ export default class Watch implements BunSai.Middleware {
 
   subscribe(events: EventEmitter) {
     events.once("lifecycle.init", ({ bunsai }) => {
-      this.dir = bunsai.options.dir;
+      this.dir = bunsai.options.root;
       this.cache = bunsai.cache;
       this.build = bunsai.build;
 

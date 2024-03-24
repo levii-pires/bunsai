@@ -3,11 +3,13 @@ export function resolveOptions(
 ): BunSai.ResolvedOptions {
   return {
     dev: options.dev ?? process.env.NODE_ENV !== "production",
-    dir: options.dir || "./app",
+    root: options.root || "./app",
+    outdir: options.outdir || "./dist",
     staticFiles: options.staticFiles || [],
     router: options.router || {},
     loaders: options.loaders || [],
     cache: options.cache || {},
     middlewares: options.middlewares || [],
+    build: options.build || {},
   };
 }

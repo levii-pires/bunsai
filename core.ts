@@ -3,10 +3,10 @@
 import type { Server } from "bun";
 import { EventEmitter, resolveOptions } from "./internals";
 
-export default class BunSaiCore {
+export default abstract class BunSaiCore {
+  abstract readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   protected $manifest: BunSai.Manifest = {};
   readonly options: BunSai.ResolvedOptions;
-  readonly router: InstanceType<typeof Bun.FileSystemRouter>;
   readonly events = new EventEmitter();
   readonly fileExtensions: readonly Extname[];
 
@@ -17,16 +17,14 @@ export default class BunSaiCore {
       middleware.subscribe(this.events);
     }
 
-    this.fileExtensions = this.options.staticFiles.concat(
-      this.options.loaders.flatMap((l) => l.extensions)
+    this.fileExtensions = Array.from(
+      new Set(
+        this.options.staticFiles.concat(
+          this.options.loaders.flatMap((l) => l.extensions),
+          [".js", ".jsx", ".ts", ".tsx"]
+        )
+      )
     );
-
-    this.router = new Bun.FileSystemRouter({
-      ...this.options.router,
-      dir: this.options.dir,
-      style: "nextjs",
-      fileExtensions: this.fileExtensions as string[],
-    });
   }
 
   protected async $fetch(request: Request, server: Server) {
@@ -99,7 +97,7 @@ export default class BunSaiCore {
 
         break;
       }
-      case "file": {
+      case "static": {
         result = new Response(
           Bun.file(onManifest.path),
           onManifest.responseInit || void 0
@@ -170,11 +168,11 @@ export default class BunSaiCore {
     return this.$wrapFetch();
   }
 
-  static async loadFromManifest(path: string, options?: BunSai.Options) {
-    const instance = new this(options);
+  // static async loadFromManifest(path: string, options?: BunSai.Options) {
+  //   const instance = new this(options);
 
-    instance.$manifest = await Bun.file(path).json();
+  //   instance.$manifest = await Bun.file(path).json();
 
-    return instance;
-  }
+  //   return instance;
+  // }
 }
